@@ -32,9 +32,9 @@ export const getCategoriesForBenefitName = async (accessToken, benefitName) => {
     });
 };
 const getProfile = async (accessToken) => {
-    const response = await fetch("https://api.joinforma.com/client/api/v3/settings/profile?is_mobile=true", {
+    const response = await fetch('https://api.joinforma.com/client/api/v3/settings/profile?is_mobile=true', {
         headers: {
-            "x-auth-token": accessToken,
+            'x-auth-token': accessToken,
         },
     });
     if (!response.ok) {

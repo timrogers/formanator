@@ -1,9 +1,9 @@
-import * as commander from "commander";
-import Table from "cli-table";
+import * as commander from 'commander';
+import Table from 'cli-table';
 
-import { actionRunner } from "../utils.js";
-import { getAccessToken } from "../config.js";
-import { getBenefits } from "../forma.js";
+import { actionRunner } from '../utils.js';
+import { getAccessToken } from '../config.js';
+import { getBenefits } from '../forma.js';
 
 const command = new commander.Command();
 
@@ -12,14 +12,9 @@ interface Arguments {
 }
 
 command
-  .name("benefits")
-  .description(
-    "List benefits in your Forma account and their remaining balances",
-  )
-  .option(
-    "--access_token <access_token>",
-    "Access token used to authenticate with Forma",
-  )
+  .name('benefits')
+  .description('List benefits in your Forma account and their remaining balances')
+  .option('--access_token <access_token>', 'Access token used to authenticate with Forma')
   .action(
     actionRunner(async (opts: Arguments) => {
       const accessToken = opts.accessToken ?? getAccessToken();
@@ -33,7 +28,7 @@ command
       const benefits = await getBenefits(accessToken);
 
       const table = new Table({
-        head: ["Name", "Remaining Amount"],
+        head: ['Name', 'Remaining Amount'],
       });
 
       for (const benefit of benefits) {

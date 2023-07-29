@@ -57,10 +57,7 @@ export const getCategoriesForBenefitName = async (
 
   const employeeWalletConfiguration = profile.data.employee.employee_wallets
     .filter((benefit) => benefit.is_employee_eligible)
-    .find(
-      (benefit) =>
-        benefit.company_wallet_configuration.wallet_name === benefitName,
-    );
+    .find((benefit) => benefit.company_wallet_configuration.wallet_name === benefitName);
 
   const companyWalletConfiguration =
     profile.data.company.company_wallet_configurations.find(
@@ -100,10 +97,10 @@ export const getCategoriesForBenefitName = async (
 
 const getProfile = async (accessToken: string): Promise<ProfileResponse> => {
   const response = await fetch(
-    "https://api.joinforma.com/client/api/v3/settings/profile?is_mobile=true",
+    'https://api.joinforma.com/client/api/v3/settings/profile?is_mobile=true',
     {
       headers: {
-        "x-auth-token": accessToken,
+        'x-auth-token': accessToken,
       },
     },
   );
