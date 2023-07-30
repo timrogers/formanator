@@ -64,7 +64,11 @@ const attemptToinferCategoryAndBenefit = async (opts: {
   const returnedCategoryAsString = chatCompletion.data.choices[0].message?.content;
 
   if (!returnedCategoryAsString) {
-    throw new Error(`Something went wrong while inferring the benefit and category for your claim. OpenAI returned an unexpected response: ${JSON.stringify(chatCompletion.data)}`);
+    throw new Error(
+      `Something went wrong while inferring the benefit and category for your claim. OpenAI returned an unexpected response: ${JSON.stringify(
+        chatCompletion.data,
+      )}`,
+    );
   }
 
   const returnedCategory = categoriesWithBenefits.find(
@@ -80,7 +84,9 @@ const attemptToinferCategoryAndBenefit = async (opts: {
   }
 
   console.log(
-    chalk.green(`OpenAI inferred that you should claim using the "${returnedCategory.benefit.name}" benefit and "${returnedCategoryAsString}" category. If that seems right, hit Enter. If not, press Ctrl + C to end your session.`),
+    chalk.green(
+      `OpenAI inferred that you should claim using the "${returnedCategory.benefit.name}" benefit and "${returnedCategoryAsString}" category. If that seems right, hit Enter. If not, press Ctrl + C to end your session.`,
+    ),
   );
   prompt('> ');
 
@@ -113,7 +119,7 @@ command
   .option(
     '--openai-api-key <openai_token>',
     'An optional OpenAI API key used to infer the benefit and category based on the merchant and description. If this is set, you may omit the `--benefit` and `--category` options. This can also be configured using the `OPENAI_API_KEY` environment variable.',
-    process.env.OPENAI_API_KEY
+    process.env.OPENAI_API_KEY,
   )
   .action(
     actionRunner(async (opts: Arguments) => {
