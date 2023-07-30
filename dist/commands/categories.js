@@ -8,7 +8,7 @@ command
     .name('categories')
     .description('List categories available for a Forma benefit')
     .requiredOption('--benefit <benefit>', 'The benefit to list categories for')
-    .option('--access_token <access_token>', 'Access token used to authenticate with Forma')
+    .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
     .action(actionRunner(async (opts) => {
     const accessToken = opts.accessToken ?? getAccessToken();
     if (!accessToken) {
