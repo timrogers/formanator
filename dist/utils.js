@@ -1,7 +1,8 @@
 import promptSync from 'prompt-sync';
+import chalk from 'chalk';
 export const prompt = promptSync({ sigint: true });
 const actionErrorHandler = (error) => {
-    console.error(error.message);
+    console.error(chalk.red(error.message));
     process.exit(1);
 };
 export const actionRunner = (fn) => {
