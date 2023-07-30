@@ -1,6 +1,8 @@
 import { readFileSync } from 'fs';
 import path from 'path';
 import { lookup } from 'mime-types';
+import axios from 'axios';
+import { validateAxiosStatus } from './utils.js';
 
 interface Benefit {
   id: string;
@@ -117,22 +119,23 @@ export const getCategoriesForBenefitName = async (
 };
 
 const getProfile = async (accessToken: string): Promise<ProfileResponse> => {
-  const response = await fetch(
+  const response = await axios.get(
     'https://api.joinforma.com/client/api/v3/settings/profile?is_mobile=true',
     {
       headers: {
         'x-auth-token': accessToken,
       },
+      validateStatus: validateAxiosStatus,
     },
   );
 
-  if (!response.ok) {
+  if (response.status !== 200) {
     throw new Error(
       `Something went wrong while fetching profile - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`,
     );
   }
 
-  return (await response.json()) as ProfileResponse;
+  return response.data as ProfileResponse;
 };
 
 export const getBenefits = async (accessToken: string): Promise<Benefit[]> => {
@@ -229,32 +232,42 @@ export const createClaim = async (opts: CreateClaimOptions): Promise<void> => {
   }
 };
 
+interface RequestMagicLinkResponse {
+  success: boolean;
+  status: number;
+  data: {
+    done: boolean;
+  };
+}
+
 export const requestMagicLink = async (email: string): Promise<void> => {
-  const response = await fetch(
+  const response = await axios.post(
     'https://api.joinforma.com/client/auth/v2/login/magic?is_mobile=true',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email }),
-    },
+    { email },
   );
 
-  if (!response.ok) {
-    throw new Error('Unable to request magic link');
+  if (response.status !== 200) {
+    throw new Error(
+      `Something went wrong while requesting magic link - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`,
+    );
   }
 
-  const parsedResponse = (await response.json()) as {
-    success: boolean;
-    status: number;
-    data: { done: boolean };
-  };
+  const parsedResponse = response.data as RequestMagicLinkResponse;
 
   if (!parsedResponse.success) {
-    throw new Error('Unable to request magic link');
+    throw new Error(
+      `Something went wrong while requesting magic link - received a \`200 OK\` response, but the response body indicated that the request was not successful: ${JSON.stringify(
+        parsedResponse,
+      )}`,
+    );
   }
 };
+
+interface ExchangeIdAndTkForAccessTokenResponse {
+  success: boolean;
+  status: number;
+  data: { auth_token: string };
+}
 
 export const exchangeIdAndTkForAccessToken = async (
   id: string,
@@ -269,23 +282,21 @@ export const exchangeIdAndTkForAccessToken = async (
     is_mobile: 'true',
   }).toString();
 
-  const response = await fetch(requestUrl);
+  const response = await axios.get(requestUrl.toString());
 
-  if (!response.ok) {
+  if (response.status !== 200) {
     throw new Error(
-      `Something went wrong when exchanging the magic link for a token - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`,
+      `Something went wrong while exchanging magic link for token - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`,
     );
   }
 
-  const parsedResponse = (await response.json()) as {
-    success: boolean;
-    status: number;
-    data: { auth_token: string };
-  };
+  const parsedResponse = response.data as ExchangeIdAndTkForAccessTokenResponse;
 
   if (!parsedResponse.success) {
     throw new Error(
-      'Something went wrong when exchanging the magic link for a token. Received a `200 OK` response, but the response body indicated that the request was not successful',
+      `Something went wrong while exchanging magic link for token - received a \`200 OK\` response, but the response body indicated that the request was not successful: ${JSON.stringify(
+        parsedResponse,
+      )}`,
     );
   }
 
