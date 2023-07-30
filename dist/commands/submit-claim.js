@@ -15,7 +15,7 @@ command
     .requiredOption('--purchase-date <purchase-date>', 'The date of the purchase in YYYY-MM-DD format')
     .requiredOption('--description <description>', 'The description of the claim')
     .requiredOption('--receipt-path <receipt-path>', 'The path of the receipt. JPEG, PNG, PDF and HEIC files up to 10MB are accepted.')
-    .option('--access_token <access_token>', 'Access token used to authenticate with Forma')
+    .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
     .action(actionRunner(async (opts) => {
     const accessToken = opts.accessToken ?? getAccessToken();
     if (!accessToken) {

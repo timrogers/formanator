@@ -35,7 +35,7 @@ command
     '--receipt-path <receipt-path>',
     'The path of the receipt. JPEG, PNG, PDF and HEIC files up to 10MB are accepted.',
   )
-  .option('--access_token <access_token>', 'Access token used to authenticate with Forma')
+  .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
   .action(
     actionRunner(async (opts: Arguments) => {
       const accessToken = opts.accessToken ?? getAccessToken();

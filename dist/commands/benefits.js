@@ -7,7 +7,7 @@ const command = new commander.Command();
 command
     .name('benefits')
     .description('List benefits in your Forma account and their remaining balances')
-    .option('--access_token <access_token>', 'Access token used to authenticate with Forma')
+    .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
     .action(actionRunner(async (opts) => {
     const accessToken = opts.accessToken ?? getAccessToken();
     if (!accessToken) {
