@@ -1,7 +1,6 @@
-import { readFileSync } from 'fs';
-import path from 'path';
-import { lookup } from 'mime-types';
 import axios from 'axios';
+import { createReadStream } from 'fs';
+
 import { validateAxiosStatus } from './utils.js';
 
 interface Benefit {
@@ -170,6 +169,10 @@ export const getBenefitsWithCategories = async (
   );
 };
 
+interface CreateClaimResponse {
+  success: boolean;
+}
+
 export const createClaim = async (opts: CreateClaimOptions): Promise<void> => {
   const {
     accessToken,
@@ -184,44 +187,37 @@ export const createClaim = async (opts: CreateClaimOptions): Promise<void> => {
     subcategoryValue,
   } = opts;
 
-  const formData = new FormData();
-  formData.append('type', 'transaction');
-  formData.append('is_recurring', 'false');
-  formData.append('amount', amount);
-  formData.append('transaction_date', purchaseDate);
-  formData.append('default_employee_wallet_id', benefitId);
-  formData.append('note', description);
-  formData.append('category', categoryId);
-  formData.append('category_alias', '');
-  formData.append('subcategory', subcategoryValue);
-  formData.append('subcategory_alias', subcategoryAlias ?? '');
-  formData.append('reimbursement_vendor', merchant);
-
-  const receiptData = readFileSync(receiptPath);
-  const receiptBlob = new Blob([receiptData], { type: lookup(receiptPath) });
-  const receiptFilename = path.basename(receiptPath);
-
-  formData.set('file[]', receiptBlob, receiptFilename);
-
-  const response = await fetch(
+  const response = await axios.post(
     'https://api.joinforma.com/client/api/v2/claims?is_mobile=true',
     {
-      method: 'POST',
+      type: 'transaction',
+      is_recurring: 'false',
+      amount,
+      transaction_date: purchaseDate,
+      default_employee_wallet_id: benefitId,
+      note: description,
+      category: categoryId,
+      category_alias: '',
+      subcategory: subcategoryValue,
+      subcategory_alias: subcategoryAlias ?? '',
+      reimbursement_vendor: merchant,
+      file: [createReadStream(receiptPath)],
+    },
+    {
       headers: {
+        'Content-Type': 'multipart/form-data',
         'x-auth-token': accessToken,
       },
-      body: formData,
     },
   );
 
-  if (!response.ok) {
-    const responseText = await response.text();
+  if (response.status !== 201) {
     throw new Error(
-      `Something went wrong while submitting claim - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`: ${responseText}.`,
+      `Something went wrong while submitting claim - expected \`201 Created\` response, got \`${response.status} ${response.statusText}\`.`,
     );
   }
 
-  const parsedResponse = (await response.json()) as { success: boolean };
+  const parsedResponse = response.data as CreateClaimResponse;
 
   if (!parsedResponse.success) {
     throw new Error(
