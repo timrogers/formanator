@@ -101,9 +101,11 @@ const attemptToinferCategoryAndBenefit = async (opts: {
   }
 
   console.log(
-    chalk.green(
-      `OpenAI inferred that you should claim using the "${returnedCategory.benefit.name}" benefit and "${returnedCategoryAsString}" category. If that seems right, hit Enter. If not, press Ctrl + C to end your session.`,
-    ),
+    `OpenAI inferred that you should claim using the ${chalk.magenta(
+      returnedCategory.benefit.name,
+    )} benefit and ${chalk.magenta(
+      returnedCategoryAsString,
+    )} category. If that seems right, hit Enter. If not, press Ctrl + C to end your session.`,
   );
   prompt('> ');
 
