@@ -28,7 +28,7 @@ const AMOUNT_REGEX = /^\d+(\.\d{2})?$/;
 const isValidAmount = (amount: string): boolean => AMOUNT_REGEX.test(amount);
 
 command
-  .name('claim')
+  .name('submit-claim')
   .description('Submit a claim for a Forma benefit')
   .requiredOption('--benefit <benefit>', 'The benefit you are claiming for')
   .requiredOption('--amount <amount>', 'The amount of the claim')
