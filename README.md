@@ -2,7 +2,7 @@
 
 Formanator allows you to submit benefit claims to [Forma](https://www.joinforma.com/) from the command line, either one-by-one or in bulk.
 
-## Installation
+## Installation
 
 To install Formanator, just run:
 
