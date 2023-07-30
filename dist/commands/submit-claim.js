@@ -46,7 +46,7 @@ const attemptToinferCategoryAndBenefit = async (opts) => {
     if (!returnedCategory) {
         throw new Error(`Something went wrong while inferring the benefit and category for your claim. OpenAI returned a response that wasn't a valid category: ${returnedCategoryAsString}`);
     }
-    console.log(chalk.green(`OpenAI inferred that you should claim using the "${returnedCategory.benefit.name}" benefit and "${returnedCategoryAsString}" category. If that seems right, hit Enter. If not, press Ctrl + C to end your session.`));
+    console.log(`OpenAI inferred that you should claim using the ${chalk.magenta(returnedCategory.benefit.name)} benefit and ${chalk.magenta(returnedCategoryAsString)} category. If that seems right, hit Enter. If not, press Ctrl + C to end your session.`);
     prompt('> ');
     return { category: returnedCategoryAsString, benefit: returnedCategory.benefit.name };
 };
