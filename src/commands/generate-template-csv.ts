@@ -7,10 +7,10 @@ import { actionRunner } from '../utils.js';
 const command = new commander.Command();
 
 interface Arguments {
-  outputPath: string
+  outputPath: string;
 }
 
-const TEMPLATE_CSV = `benefit,merchant,amount,category,description,purchase_date,receipt_path\n`;
+const TEMPLATE_CSV = `benefit,category,merchant,amount,description,purchaseDate,receiptPath\n`;
 
 command
   .name('generate-template-csv')
@@ -19,7 +19,9 @@ command
   .action(
     actionRunner(async (opts: Arguments) => {
       if (existsSync(opts.outputPath)) {
-        throw new Error(`File '${opts.outputPath}' already exists. Please delete it first, or set a different \`--output-path\` option.`);
+        throw new Error(
+          `File '${opts.outputPath}' already exists. Please delete it first, or set a different \`--output-path\` option.`,
+        );
       }
 
       writeFileSync(opts.outputPath, TEMPLATE_CSV);

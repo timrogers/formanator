@@ -8,3 +8,8 @@ const actionErrorHandler = (error) => {
 export const actionRunner = (fn) => {
     return async (...args) => await fn(...args).catch(actionErrorHandler);
 };
+export const serializeError = (e) => {
+    if (typeof e === 'string')
+        return e;
+    return JSON.stringify(e);
+};

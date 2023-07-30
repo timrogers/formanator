@@ -11,3 +11,8 @@ const actionErrorHandler = (error: Error): void => {
 export const actionRunner = (fn: (...args) => Promise<any>) => {
   return async (...args) => await fn(...args).catch(actionErrorHandler);
 };
+
+export const serializeError = (e: any): string => {
+  if (typeof e === 'string') return e;
+  return JSON.stringify(e);
+};

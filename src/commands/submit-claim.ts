@@ -1,9 +1,10 @@
 import * as commander from 'commander';
-import { existsSync } from 'fs';
+import chalk from 'chalk';
 
 import { actionRunner } from '../utils.js';
 import { getAccessToken } from '../config.js';
-import { createClaim, getCategoriesForBenefitName } from '../forma.js';
+import { createClaim } from '../forma.js';
+import { claimParamsToCreateClaimOptions } from '../claims.js';
 
 const command = new commander.Command();
 
@@ -17,15 +18,6 @@ interface Arguments {
   description: string;
   receiptPath: string;
 }
-
-const PURCHASE_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-
-const isValidPurchaseDate = (purchaseDate: string): boolean =>
-  PURCHASE_DATE_REGEX.test(purchaseDate);
-
-const AMOUNT_REGEX = /^\d+(\.\d{2})?$/;
-
-const isValidAmount = (amount: string): boolean => AMOUNT_REGEX.test(amount);
 
 command
   .name('submit-claim')
@@ -54,37 +46,11 @@ command
         );
       }
 
-      const categories = await getCategoriesForBenefitName(accessToken, opts.benefit);
+      const createClaimOptions = await claimParamsToCreateClaimOptions(opts, accessToken);
 
-      const matchingCategory = categories.find(
-        (category) =>
-          category.subcategory_alias === opts.category ||
-          category.subcategory_name === opts.category,
-      );
+      await createClaim(createClaimOptions);
 
-      if (matchingCategory == null) {
-        throw new Error(
-          `No category '${opts.category}' found for benefit '${opts.benefit}'.`,
-        );
-      }
-
-      if (!isValidPurchaseDate(opts.purchaseDate))
-        throw new Error('Purchase date must be in YYYY-MM-DD format.');
-      if (!isValidAmount(opts.amount))
-        throw new Error('Amount must be in the format 0.00.');
-      if (!existsSync(opts.receiptPath))
-        throw new Error(`Receipt path '${opts.receiptPath}' does not exist.`);
-
-      await createClaim({
-        ...opts,
-        accessToken,
-        benefitId: matchingCategory.benefit_id,
-        categoryId: matchingCategory.category_id,
-        subcategoryAlias: matchingCategory.subcategory_alias,
-        subcategoryValue: matchingCategory.subcategory_value,
-      });
-
-      console.log('Claim submitted successfully.');
+      console.log(chalk.green('Claim submitted successfully ✅'));
     }),
   );
 

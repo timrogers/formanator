@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 import { readFileSync } from 'fs';
 import path from 'path';
 import { lookup } from 'mime-types';

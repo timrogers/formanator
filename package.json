@@ -20,11 +20,11 @@
   "author": "Tim Rogers <me@timrogers.co.uk>",
   "license": "MIT",
   "dependencies": {
+    "@fast-csv/parse": "^4.3.6",
     "chalk": "^5.3.0",
     "cli-table": "^0.3.11",
     "commander": "^11.0.0",
     "mime-types": "^2.1.35",
-    "node-fetch": "^3.3.2",
     "prompt-sync": "^4.2.0"
   },
   "repository": {

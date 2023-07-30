@@ -3,7 +3,7 @@ import { existsSync, writeFileSync } from 'fs';
 import chalk from 'chalk';
 import { actionRunner } from '../utils.js';
 const command = new commander.Command();
-const TEMPLATE_CSV = `benefit,merchant,amount,category,description,purchase_date,receipt_path\n`;
+const TEMPLATE_CSV = `benefit,category,merchant,amount,description,purchaseDate,receiptPath\n`;
 command
     .name('generate-template-csv')
     .description('Generate a template CSV for submitting multiple claims at the same time')
