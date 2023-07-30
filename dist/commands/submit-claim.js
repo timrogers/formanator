@@ -6,14 +6,28 @@ import { getAccessToken } from '../config.js';
 import { createClaim, getBenefitsWithCategories, } from '../forma.js';
 import { claimParamsToCreateClaimOptions } from '../claims.js';
 const command = new commander.Command();
+const generateOpenaiPrompt = (opts) => {
+    const { description, merchant, validCategories } = opts;
+    return `Your job is to predict the category for an expense claim based on the name of the merchant and a description of what was purchased. You should give a single, specific answer without any extra words or punctuation.
+
+Here are the possible categories:
+
+${validCategories.join('\n')}
+
+Please predict the category for the following claim:
+
+Merchant: ${merchant}
+Description: ${description}`;
+};
 const attemptToinferCategoryAndBenefit = async (opts) => {
+    const { merchant, description, benefitsWithCategories, openaiApiKey: apiKey } = opts;
     const configuration = new Configuration({
-        apiKey: opts.openaiApiKey,
+        apiKey,
     });
     const openai = new OpenAIApi(configuration);
-    const categoriesWithBenefits = opts.benefitsWithCategories.flatMap((benefit) => benefit.categories.map((category) => ({ ...category, benefit })));
-    const categoryNames = categoriesWithBenefits.flatMap((category) => category.subcategory_alias ?? category.subcategory_name);
-    const content = `Your job is to predict the category for an expense claim based on the name of the merchant and a description of what was purchased. You should give a single, specific answer without any extra words or punctuation.\n\nHere are the possible categories:\n\n${categoryNames.join('\n')}\n\nPlease predict the category for the following example claim:\nMerchant: ${opts.merchant}\nDescription:${opts.description}`;
+    const categoriesWithBenefits = benefitsWithCategories.flatMap((benefit) => benefit.categories.map((category) => ({ ...category, benefit })));
+    const validCategories = categoriesWithBenefits.flatMap((category) => category.subcategory_alias ?? category.subcategory_name);
+    const content = generateOpenaiPrompt({ validCategories, merchant, description });
     const chatCompletion = await openai.createChatCompletion({
         model: 'gpt-3.5-turbo',
         messages: [

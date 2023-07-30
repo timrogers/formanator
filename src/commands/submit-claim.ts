@@ -25,31 +25,48 @@ interface Arguments {
   openaiApiKey?: string;
 }
 
+const generateOpenaiPrompt = (opts: {
+  validCategories: string[];
+  merchant: string;
+  description: string;
+}): string => {
+  const { description, merchant, validCategories } = opts;
+
+  return `Your job is to predict the category for an expense claim based on the name of the merchant and a description of what was purchased. You should give a single, specific answer without any extra words or punctuation.
+
+Here are the possible categories:
+
+${validCategories.join('\n')}
+
+Please predict the category for the following claim:
+
+Merchant: ${merchant}
+Description: ${description}`;
+};
+
 const attemptToinferCategoryAndBenefit = async (opts: {
   merchant: string;
   description: string;
   benefitsWithCategories: BenefitWithCategories[];
   openaiApiKey: string;
 }): Promise<{ category: string; benefit: string }> => {
+  const { merchant, description, benefitsWithCategories, openaiApiKey: apiKey } = opts;
+
   const configuration = new Configuration({
-    apiKey: opts.openaiApiKey,
+    apiKey,
   });
 
   const openai = new OpenAIApi(configuration);
 
-  const categoriesWithBenefits = opts.benefitsWithCategories.flatMap((benefit) =>
+  const categoriesWithBenefits = benefitsWithCategories.flatMap((benefit) =>
     benefit.categories.map((category) => ({ ...category, benefit })),
   );
 
-  const categoryNames = categoriesWithBenefits.flatMap(
+  const validCategories = categoriesWithBenefits.flatMap(
     (category) => category.subcategory_alias ?? category.subcategory_name,
   );
 
-  const content = `Your job is to predict the category for an expense claim based on the name of the merchant and a description of what was purchased. You should give a single, specific answer without any extra words or punctuation.\n\nHere are the possible categories:\n\n${categoryNames.join(
-    '\n',
-  )}\n\nPlease predict the category for the following example claim:\nMerchant: ${
-    opts.merchant
-  }\nDescription:${opts.description}`;
+  const content = generateOpenaiPrompt({ validCategories, merchant, description });
 
   const chatCompletion = await openai.createChatCompletion({
     model: 'gpt-3.5-turbo',
