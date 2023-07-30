@@ -15,7 +15,7 @@ const attemptToinferCategoryAndBenefit = async (opts) => {
     const categoryNames = categoriesWithBenefits.flatMap((category) => category.subcategory_alias ?? category.subcategory_name);
     const content = `Your job is to predict the category for an expense claim based on the name of the merchant and a description of what was purchased. You should give a single, specific answer without any extra words or punctuation.\n\nHere are the possible categories:\n\n${categoryNames.join('\n')}\n\nPlease predict the category for the following example claim:\nMerchant: ${opts.merchant}\nDescription:${opts.description}`;
     const chatCompletion = await openai.createChatCompletion({
-        model: 'gpt-3.5-turbo-16k',
+        model: 'gpt-3.5-turbo',
         messages: [
             {
                 role: 'user',
