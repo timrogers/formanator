@@ -109,7 +109,7 @@ command
     '--receipt-path <receipt-path>',
     'The path of the receipt. JPEG, PNG, PDF and HEIC files up to 10MB are accepted.',
   )
-  .option('--access_token <access_token>', 'Access token used to authenticate with Forma')
+  .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
   .option(
     '--openai-api-key <openai_token>',
     'An optional OpenAI API key used to infer the benefit and category based on the merchant and description. If this is set, you may omit the `--benefit` and `--category` options. This can also be configured using the `OPENAI_API_KEY` environment variable.',

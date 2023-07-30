@@ -39,7 +39,7 @@ command
     .name('submit-claims-from-csv')
     .description('Submit multiple Forms claims from a CSV. To generate a template CSV to fill in, use the `generate-template-csv` command.')
     .requiredOption('--input-path <input_path>', 'The path to the CSV to read claims from')
-    .option('--access_token <access_token>', 'Access token used to authenticate with Forma')
+    .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
     .action(actionRunner(async (opts) => {
     const accessToken = opts.accessToken ?? getAccessToken();
     if (!accessToken) {
