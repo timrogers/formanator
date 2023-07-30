@@ -16,3 +16,5 @@ export const serializeError = (e: any): string => {
   if (typeof e === 'string') return e;
   return JSON.stringify(e);
 };
+
+export const validateAxiosStatus = (_status: number): boolean => true;

@@ -13,3 +13,4 @@ export const serializeError = (e) => {
         return e;
     return JSON.stringify(e);
 };
+export const validateAxiosStatus = (_status) => true;
