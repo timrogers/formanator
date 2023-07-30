@@ -9,6 +9,10 @@ interface Benefit {
   remainingAmountCurrency: string;
 }
 
+export interface BenefitWithCategories extends Benefit {
+  categories: Category[];
+}
+
 interface ProfileResponseCategory {
   id: string;
   name: string;
@@ -144,6 +148,23 @@ export const getBenefits = async (accessToken: string): Promise<Benefit[]> => {
       remainingAmount: benefit.amount,
       remainingAmountCurrency,
     }));
+};
+
+export const getBenefitsWithCategories = async (
+  accessToken: string,
+): Promise<BenefitWithCategories[]> => {
+  const benefits = await getBenefits(accessToken);
+
+  return await Promise.all(
+    benefits.map(async (benefit) => {
+      const categories = await getCategoriesForBenefitName(accessToken, benefit.name);
+
+      return {
+        ...benefit,
+        categories,
+      };
+    }),
+  );
 };
 
 export const createClaim = async (opts: CreateClaimOptions): Promise<void> => {

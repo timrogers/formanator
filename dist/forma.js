@@ -57,6 +57,16 @@ export const getBenefits = async (accessToken) => {
         remainingAmountCurrency,
     }));
 };
+export const getBenefitsWithCategories = async (accessToken) => {
+    const benefits = await getBenefits(accessToken);
+    return await Promise.all(benefits.map(async (benefit) => {
+        const categories = await getCategoriesForBenefitName(accessToken, benefit.name);
+        return {
+            ...benefit,
+            categories,
+        };
+    }));
+};
 export const createClaim = async (opts) => {
     const { accessToken, amount, merchant, purchaseDate, description, receiptPath, benefitId, categoryId, subcategoryAlias, subcategoryValue, } = opts;
     const formData = new FormData();

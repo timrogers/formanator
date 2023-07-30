@@ -25,6 +25,7 @@
     "cli-table": "^0.3.11",
     "commander": "^11.0.0",
     "mime-types": "^2.1.35",
+    "openai": "^3.3.0",
     "prompt-sync": "^4.2.0"
   },
   "repository": {
