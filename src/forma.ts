@@ -1,3 +1,8 @@
+import fetch from 'node-fetch';
+import { readFileSync } from 'fs';
+import path from 'path';
+import { lookup } from 'mime-types';
+
 interface Benefit {
   id: string;
   name: string;
@@ -47,6 +52,19 @@ interface ProfileResponse {
       };
     };
   };
+}
+
+interface CreateClaimOptions {
+  amount: string;
+  merchant: string;
+  purchaseDate: string;
+  description: string;
+  receiptPath: string;
+  accessToken: string;
+  benefitId: string;
+  categoryId: string;
+  subcategoryValue: string;
+  subcategoryAlias: string | null;
 }
 
 export const getCategoriesForBenefitName = async (
@@ -127,4 +145,129 @@ export const getBenefits = async (accessToken: string): Promise<Benefit[]> => {
       remainingAmount: benefit.amount,
       remainingAmountCurrency,
     }));
+};
+
+export const createClaim = async (opts: CreateClaimOptions): Promise<void> => {
+  const {
+    accessToken,
+    amount,
+    merchant,
+    purchaseDate,
+    description,
+    receiptPath,
+    benefitId,
+    categoryId,
+    subcategoryAlias,
+    subcategoryValue,
+  } = opts;
+
+  const formData = new FormData();
+  formData.append('type', 'transaction');
+  formData.append('is_recurring', 'false');
+  formData.append('amount', amount);
+  formData.append('transaction_date', purchaseDate);
+  formData.append('default_employee_wallet_id', benefitId);
+  formData.append('note', description);
+  formData.append('category', categoryId);
+  formData.append('category_alias', '');
+  formData.append('subcategory', subcategoryValue);
+  formData.append('subcategory_alias', subcategoryAlias ?? '');
+  formData.append('reimbursement_vendor', merchant);
+
+  const receiptData = readFileSync(receiptPath);
+  const receiptBlob = new Blob([receiptData], { type: lookup(receiptPath) });
+  const receiptFilename = path.basename(receiptPath);
+
+  formData.set('file[]', receiptBlob, receiptFilename);
+
+  const response = await fetch(
+    'https://api.joinforma.com/client/api/v2/claims?is_mobile=true',
+    {
+      method: 'POST',
+      headers: {
+        'x-auth-token': accessToken,
+      },
+      body: formData,
+    },
+  );
+
+  if (!response.ok) {
+    const responseText = await response.text();
+    throw new Error(
+      `Something went wrong while submitting claim - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`: ${responseText}.`,
+    );
+  }
+
+  const parsedResponse = (await response.json()) as { success: boolean };
+
+  if (!parsedResponse.success) {
+    throw new Error(
+      `Something went wrong while submitting your claim. Received a \`201 Created\` response, but the response body indicated that the request was not successful: ${JSON.stringify(
+        parsedResponse,
+      )}.`,
+    );
+  }
+};
+
+export const requestMagicLink = async (email: string): Promise<void> => {
+  const response = await fetch(
+    'https://api.joinforma.com/client/auth/v2/login/magic?is_mobile=true',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error('Unable to request magic link');
+  }
+
+  const parsedResponse = (await response.json()) as {
+    success: boolean;
+    status: number;
+    data: { done: boolean };
+  };
+
+  if (!parsedResponse.success) {
+    throw new Error('Unable to request magic link');
+  }
+};
+
+export const exchangeIdAndTkForAccessToken = async (
+  id: string,
+  tk: string,
+): Promise<string> => {
+  const requestUrl = new URL('https://api.joinforma.com/client/auth/v2/login/magic');
+
+  requestUrl.search = new URLSearchParams({
+    id,
+    tk,
+    return_token: 'true',
+    is_mobile: 'true',
+  }).toString();
+
+  const response = await fetch(requestUrl);
+
+  if (!response.ok) {
+    throw new Error(
+      `Something went wrong when exchanging the magic link for a token - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`,
+    );
+  }
+
+  const parsedResponse = (await response.json()) as {
+    success: boolean;
+    status: number;
+    data: { auth_token: string };
+  };
+
+  if (!parsedResponse.success) {
+    throw new Error(
+      'Something went wrong when exchanging the magic link for a token. Received a `200 OK` response, but the response body indicated that the request was not successful',
+    );
+  }
+
+  return parsedResponse.data.auth_token;
 };

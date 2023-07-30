@@ -1,86 +1,70 @@
 import * as commander from 'commander';
+import chalk from 'chalk';
 import { actionRunner, prompt } from '../utils.js';
 import { setAccessToken } from '../config.js';
+import { exchangeIdAndTkForAccessToken, requestMagicLink } from '../forma.js';
 const command = new commander.Command();
-const requestMagicLink = async (email) => {
-    const response = await fetch('https://api.joinforma.com/client/auth/v2/login/magic?is_mobile=true', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-    });
-    if (!response.ok) {
-        throw new Error('Unable to request magic link');
+const parseEmailedFormaMagicLink = (input) => {
+    const parsedUrl = new URL(input);
+    if (parsedUrl.hostname !== 'joinforma.page.link') {
+        throw new Error('Forma magic links are expected to have the hostname `joinforma.page.link`.');
     }
-    const parsedResponse = (await response.json());
-    if (!parsedResponse.success) {
-        throw new Error('Unable to request magic link');
+    if (parsedUrl.protocol !== 'https:') {
+        throw new Error('Forma magic links are expected to have the protocol `https:`.');
+    }
+    if (!parsedUrl.pathname.startsWith('/')) {
+        throw new Error('Forma magic links are expected to not have a path.');
+    }
+    const magicLinkEmbeddedInUrl = parsedUrl.searchParams.get('link');
+    if (!magicLinkEmbeddedInUrl) {
+        throw new Error('Forma magic links are expected to have a `link` query parameter.');
+    }
+    const realMagicLinkAsString = decodeURIComponent(magicLinkEmbeddedInUrl);
+    const realMagicLink = new URL(realMagicLinkAsString);
+    const id = realMagicLink.searchParams.get('id');
+    const tk = realMagicLink.searchParams.get('tk');
+    if (!id || !tk) {
+        throw new Error('Forma magic links are expected to have a `link` query parameter containing a URL with an `id` and `tk` query parameter embedded inside.');
+    }
+    return { id, tk };
+};
+const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+const promptForEmail = (isFirstRun = true) => {
+    const promptMessage = isFirstRun
+        ? 'Enter the email address you use to log on to Forma, then press Enter.'
+        : chalk.yellow("That doesn't look like a valid email address. Please try again.");
+    console.log(promptMessage);
+    const email = prompt('> ');
+    if (!EMAIL_REGEX.test(email)) {
+        return promptForEmail(false);
+    }
+    else {
+        return email;
     }
 };
-const isEmailedFormaMagicLink = (emailedMagicLink) => emailedMagicLink.hostname === 'joinforma.page.link' &&
-    emailedMagicLink.protocol === 'https:' &&
-    emailedMagicLink.pathname === '/' &&
-    emailedMagicLink.searchParams.has('link');
-const exchangeEmailedMagicLinkForToken = async (emailedMagicLink) => {
-    const parsedEmailedMagicLink = new URL(emailedMagicLink);
-    if (!isEmailedFormaMagicLink(parsedEmailedMagicLink)) {
-        throw new Error("The provided link doesn't look like a real Forma magic link.");
+const promptForEmailedMagicLink = (email, errorMessage = null) => {
+    const promptMessage = errorMessage
+        ? chalk.yellow("That doesn't look like a valid magic link. Please try again.")
+        : `Copy and paste the magic link sent to you at ${email}, then press Enter.`;
+    console.log(promptMessage);
+    const emailedMagicLink = prompt('> ');
+    try {
+        return parseEmailedFormaMagicLink(emailedMagicLink);
     }
-    const urlEncodedMagicLink = parsedEmailedMagicLink.searchParams.get('link');
-    const realMagicLinkAsString = decodeURIComponent(urlEncodedMagicLink);
-    const realMagicLink = new URL(realMagicLinkAsString);
-    const idFromMagicLink = realMagicLink.searchParams.get('id');
-    const tkFromMagicLink = realMagicLink.searchParams.get('tk');
-    if (!idFromMagicLink || !tkFromMagicLink) {
-        throw new Error("The provided link doesn't look like a real Forma magic link.");
+    catch (e) {
+        return promptForEmailedMagicLink(email, e);
     }
-    const requestUrl = new URL('https://api.joinforma.com/client/auth/v2/login/magic');
-    requestUrl.search = new URLSearchParams({
-        id: idFromMagicLink,
-        tk: tkFromMagicLink,
-        return_token: 'true',
-        is_mobile: 'true',
-    }).toString();
-    const response = await fetch(requestUrl);
-    if (!response.ok) {
-        throw new Error(`Something went wrong when exchanging the magic link for a token - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`);
-    }
-    const parsedResponse = (await response.json());
-    if (!parsedResponse.success) {
-        throw new Error('Something went wrong when exchanging the magic link for a token. Received a `200 OK` response, but the response body indicated that the request was not successful');
-    }
-    return parsedResponse.data.auth_token;
 };
 command
     .name('login')
     .description('Connect Formanator to your Forma account with a magic link')
     .option('--email <email>', 'Email address used to log in to Forma')
-    .option('--magic-link-url <magic_link_url>', 'Magic link received by email for logging in to Forma')
     .action(actionRunner(async (opts) => {
-    if (opts.email && opts.magicLinkUrl) {
-        throw new Error('You must provide either --email or --magic-link-url, not both');
-    }
-    if (opts.magicLinkUrl) {
-        const accessToken = await exchangeEmailedMagicLinkForToken(opts.magicLinkUrl);
-        setAccessToken(accessToken);
-    }
-    else if (opts.email) {
-        await requestMagicLink(opts.email);
-        console.log(`Copy and paste the magic link sent to you at ${opts.email}, then press Enter.`);
-        const magicLink = prompt('> ');
-        const accessToken = await exchangeEmailedMagicLinkForToken(magicLink);
-        setAccessToken(accessToken);
-    }
-    else {
-        console.log('Enter the email address you use to log on to Forma, then press Enter.');
-        const email = prompt('> ');
-        await requestMagicLink(email);
-        console.log(`Copy and paste the magic link sent to you at ${email}, then press Enter.`);
-        const magicLink = prompt('> ');
-        const accessToken = await exchangeEmailedMagicLinkForToken(magicLink);
-        setAccessToken(accessToken);
-    }
-    console.log('You are now logged in! 🥳');
+    const email = opts.email ?? promptForEmail();
+    await requestMagicLink(email);
+    const { id, tk } = promptForEmailedMagicLink(email);
+    const accessToken = await exchangeIdAndTkForAccessToken(id, tk);
+    setAccessToken(accessToken);
+    console.log(chalk.green('You are now logged in! 🥳'));
 }));
 export default command;

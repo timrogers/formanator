@@ -1,4 +1,4 @@
-#!/usr/bin/env npx ts-node --esm
+#!/usr/bin/env node
 import * as commander from 'commander';
 import login from './commands/login.js';
 import benefits from './commands/benefits.js';

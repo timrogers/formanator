@@ -1,11 +1,9 @@
 import * as commander from 'commander';
-import { existsSync, readFileSync } from 'fs';
-import { lookup } from 'mime-types';
-import path from 'path';
+import { existsSync } from 'fs';
 
 import { actionRunner } from '../utils.js';
 import { getAccessToken } from '../config.js';
-import { getCategoriesForBenefitName } from '../forma.js';
+import { createClaim, getCategoriesForBenefitName } from '../forma.js';
 
 const command = new commander.Command();
 
@@ -20,19 +18,6 @@ interface Arguments {
   receiptPath: string;
 }
 
-interface CreateClaimOptions {
-  amount: string;
-  merchant: string;
-  purchaseDate: string;
-  description: string;
-  receiptPath: string;
-  accessToken: string;
-  benefitId: string;
-  categoryId: string;
-  subcategoryValue: string;
-  subcategoryAlias: string | null;
-}
-
 const PURCHASE_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 const isValidPurchaseDate = (purchaseDate: string): boolean =>
@@ -41,68 +26,6 @@ const isValidPurchaseDate = (purchaseDate: string): boolean =>
 const AMOUNT_REGEX = /^\d+(\.\d{2})?$/;
 
 const isValidAmount = (amount: string): boolean => AMOUNT_REGEX.test(amount);
-
-const createClaim = async (opts: CreateClaimOptions): Promise<void> => {
-  const {
-    accessToken,
-    amount,
-    merchant,
-    purchaseDate,
-    description,
-    receiptPath,
-    benefitId,
-    categoryId,
-    subcategoryAlias,
-    subcategoryValue,
-  } = opts;
-
-  const formData = new FormData();
-  formData.append('type', 'transaction');
-  formData.append('is_recurring', 'false');
-  formData.append('amount', amount);
-  formData.append('transaction_date', purchaseDate);
-  formData.append('default_employee_wallet_id', benefitId);
-  formData.append('note', description);
-  formData.append('category', categoryId);
-  formData.append('category_alias', '');
-  formData.append('subcategory', subcategoryValue);
-  formData.append('subcategory_alias', subcategoryAlias ?? '');
-  formData.append('reimbursement_vendor', merchant);
-
-  const receiptData = readFileSync(receiptPath);
-  const receiptBlob = new Blob([receiptData], { type: lookup(receiptPath) });
-  const receiptFilename = path.basename(receiptPath);
-
-  formData.set('file[]', receiptBlob, receiptFilename);
-
-  const response = await fetch(
-    'https://api.joinforma.com/client/api/v2/claims?is_mobile=true',
-    {
-      method: 'POST',
-      headers: {
-        'x-auth-token': accessToken,
-      },
-      body: formData,
-    },
-  );
-
-  if (!response.ok) {
-    const responseText = await response.text();
-    throw new Error(
-      `Something went wrong while submitting claim - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`: ${responseText}.`,
-    );
-  }
-
-  const parsedResponse = (await response.json()) as { success: boolean };
-
-  if (!parsedResponse.success) {
-    throw new Error(
-      `Something went wrong while submitting your claim. Received a \`201 Created\` response, but the response body indicated that the request was not successful: ${JSON.stringify(
-        parsedResponse,
-      )}.`,
-    );
-  }
-};
 
 command
   .name('claim')
