@@ -6,13 +6,11 @@ Formanator allows you to submit benefit claims to [Forma](https://www.joinforma.
 
 ## Installation
 
-To install Formanator, just run:
+To install Formanator, make sure you have [Node.js](https://nodejs.org/en) installed, and then just run:
 
 ```bash
 npm install -g formanator
 ```
-
-You'll need to be running at least [Node.js](https://nodejs.org/en) v18.
 
 ## Usage
 
