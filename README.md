@@ -30,7 +30,7 @@ To remember your login, Formanator stores a `.formanator.json` file in your home
 
 You can quickly submit a single claim from the command line.
 
-When submitting a claim, you need to specify a benefit and category for your claim. You can either decide that yourself, or you can have OpenAI do it for you, for a cost of about $0.003 per claim 🧠
+When submitting a claim, you need to specify a benefit and category for your claim. You can either decide that yourself, or you can have OpenAI do it for you, for a cost of about $0.001 (a tenth of a cent! 🪙) per claim 🧠
 
 #### Submitting a single claim with AI magic
 
