@@ -3,9 +3,11 @@ import Table from 'cli-table';
 import { actionRunner } from '../utils.js';
 import { getAccessToken } from '../config.js';
 import { getCategoriesForBenefitName } from '../forma.js';
+import VERSION from '../version.js';
 const command = new commander.Command();
 command
     .name('categories')
+    .version(VERSION)
     .description('List categories available for a Forma benefit')
     .requiredOption('--benefit <benefit>', 'The benefit to list categories for')
     .option('--access-token <access_token>', 'Access token used to authenticate with Forma')

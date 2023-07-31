@@ -10,6 +10,7 @@ import {
   getBenefitsWithCategories,
 } from '../forma.js';
 import { claimParamsToCreateClaimOptions } from '../claims.js';
+import VERSION from '../version.js';
 
 const command = new commander.Command();
 
@@ -114,6 +115,7 @@ const attemptToinferCategoryAndBenefit = async (opts: {
 
 command
   .name('submit-claim')
+  .version(VERSION)
   .description('Submit a claim for a Forma benefit')
   .option(
     '--benefit <benefit>',

@@ -4,6 +4,7 @@ import Table from 'cli-table';
 import { actionRunner } from '../utils.js';
 import { getAccessToken } from '../config.js';
 import { getBenefits } from '../forma.js';
+import VERSION from '../version.js';
 
 const command = new commander.Command();
 
@@ -13,6 +14,7 @@ interface Arguments {
 
 command
   .name('benefits')
+  .version(VERSION)
   .description('List benefits in your Forma account and their remaining balances')
   .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
   .action(

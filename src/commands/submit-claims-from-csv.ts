@@ -7,6 +7,7 @@ import { actionRunner, serializeError } from '../utils.js';
 import { getAccessToken } from '../config.js';
 import { createClaim } from '../forma.js';
 import { type Claim, claimParamsToCreateClaimOptions } from '../claims.js';
+import VERSION from '../version.js';
 
 const command = new commander.Command();
 
@@ -56,6 +57,7 @@ const readClaimsFromCsv = async (inputPath: string): Promise<Claim[]> => {
 
 command
   .name('submit-claims-from-csv')
+  .version(VERSION)
   .description(
     'Submit multiple Forms claims from a CSV. To generate a template CSV to fill in, use the `generate-template-csv` command.',
   )

@@ -5,6 +5,7 @@ import { actionRunner, prompt } from '../utils.js';
 import { getAccessToken } from '../config.js';
 import { createClaim, getBenefitsWithCategories, } from '../forma.js';
 import { claimParamsToCreateClaimOptions } from '../claims.js';
+import VERSION from '../version.js';
 const command = new commander.Command();
 const generateOpenaiPrompt = (opts) => {
     const { description, merchant, validCategories } = opts;
@@ -52,6 +53,7 @@ const attemptToinferCategoryAndBenefit = async (opts) => {
 };
 command
     .name('submit-claim')
+    .version(VERSION)
     .description('Submit a claim for a Forma benefit')
     .option('--benefit <benefit>', 'The benefit you are claiming for. You may omit this if an OpenAI API key is configured')
     .requiredOption('--amount <amount>', 'The amount of the claim')
