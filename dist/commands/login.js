@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { actionRunner, prompt } from '../utils.js';
 import { setAccessToken } from '../config.js';
 import { exchangeIdAndTkForAccessToken, requestMagicLink } from '../forma.js';
+import VERSION from '../version.js';
 const command = new commander.Command();
 const parseEmailedFormaMagicLink = (input) => {
     const parsedUrl = new URL(input);
@@ -57,6 +58,7 @@ const promptForEmailedMagicLink = (email, errorMessage = null) => {
 };
 command
     .name('login')
+    .version(VERSION)
     .description('Connect Formanator to your Forma account with a magic link')
     .option('--email <email>', 'Email address used to log in to Forma')
     .action(actionRunner(async (opts) => {

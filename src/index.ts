@@ -8,10 +8,12 @@ import categories from './commands/categories.js';
 import submitClaim from './commands/submit-claim.js';
 import generateTemplateCsv from './commands/generate-template-csv.js';
 import submitClaimsFromCsv from './commands/submit-claims-from-csv.js';
+import VERSION from './version.js';
 
 const program = new commander.Command();
 
 program
+  .version(VERSION)
   .addCommand(login)
   .addCommand(benefits)
   .addCommand(categories)

@@ -6,6 +6,7 @@ import { actionRunner, serializeError } from '../utils.js';
 import { getAccessToken } from '../config.js';
 import { createClaim } from '../forma.js';
 import { claimParamsToCreateClaimOptions } from '../claims.js';
+import VERSION from '../version.js';
 const command = new commander.Command();
 const EXPECTED_HEADERS = [
     'category',
@@ -37,6 +38,7 @@ const readClaimsFromCsv = async (inputPath) => {
 };
 command
     .name('submit-claims-from-csv')
+    .version(VERSION)
     .description('Submit multiple Forms claims from a CSV. To generate a template CSV to fill in, use the `generate-template-csv` command.')
     .requiredOption('--input-path <input_path>', 'The path to the CSV to read claims from')
     .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
