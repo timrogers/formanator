@@ -63,7 +63,7 @@ export interface CreateClaimOptions {
   merchant: string;
   purchaseDate: string;
   description: string;
-  receiptPath: string;
+  receiptPath: string[];
   accessToken: string;
   benefitId: string;
   categoryId: string;
@@ -187,22 +187,24 @@ export const createClaim = async (opts: CreateClaimOptions): Promise<void> => {
     subcategoryValue,
   } = opts;
 
+  const data = {
+    type: 'transaction',
+    is_recurring: 'false',
+    amount,
+    transaction_date: purchaseDate,
+    default_employee_wallet_id: benefitId,
+    note: description,
+    category: categoryId,
+    category_alias: '',
+    subcategory: subcategoryValue,
+    subcategory_alias: subcategoryAlias ?? '',
+    reimbursement_vendor: merchant,
+    file: receiptPath.map((path) => createReadStream(path)),
+  };
+
   const response = await axios.post(
     'https://api.joinforma.com/client/api/v2/claims?is_mobile=true',
-    {
-      type: 'transaction',
-      is_recurring: 'false',
-      amount,
-      transaction_date: purchaseDate,
-      default_employee_wallet_id: benefitId,
-      note: description,
-      category: categoryId,
-      category_alias: '',
-      subcategory: subcategoryValue,
-      subcategory_alias: subcategoryAlias ?? '',
-      reimbursement_vendor: merchant,
-      file: [createReadStream(receiptPath)],
-    },
+    data,
     {
       headers: {
         'Content-Type': 'multipart/form-data',
