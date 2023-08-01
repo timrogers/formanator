@@ -26,50 +26,37 @@ To get started, you'll need to connect Formanator to your Forma account. Here's 
 
 To remember your login, Formanator stores a `.formanator.json` file in your home directory with your access token.
 
-### Submitting a single claim
-
-You can quickly submit a single claim from the command line.
+### Configuring OpenAI for inferring the benefit and category
 
 When submitting a claim, you need to specify a benefit and category for your claim. You can either decide that yourself, or you can have OpenAI do it for you, for a cost of about $0.001 (a tenth of a cent! 🪙) per claim 🧠
 
-#### Submitting a single claim with AI magic
+If you want to use OpenAI to infer the benefit and category, you'll need to set it up.
 
 1. Set up an OpenAI account and make sure you either (a) have free trial credit available or (b) have set up a payment method. You can check this on the ["Usage"](https://platform.openai.com/account/usage) page.
-2. Create an [OpenAI API key](https://platform.openai.com/account/api-keys). Set the API key as the `OPENAI_API_KEY` environment variable.
-3. Figure out what you're planning to claim for.
-4. Make sure you're logged in - for more details, see "Connecting to your Forma account" above.
-5. Submit your claim by running `formanator submit-claim`. You'll need to pass a bunch of arguments:
+2. Create an [OpenAI API key](https://platform.openai.com/account/api-keys).
+3. Set the API key as the `OPENAI_API_KEY` environment variable, or be prepared to pass the `--openai-api-key` argument to every command.
+
+### Submitting a single claim
+
+1. Figure out what you're planning to claim for.
+2. Make sure you're logged in - for more details, see "Connecting to your Forma account" above.
+3. If you aren't using OpenAI to infer the benefit and category, you'll need to figure this out yourself. Get a list of your available benefits by running `formanator benefits`. Pick the relevant benefit, and then run `formanator categories --benefit <benefit>` to get a list of categories.
+4. Submit your claim by running `formanator submit-claim`. You'll need to pass a bunch of arguments:
 
 ```bash
 formanator submit-claim --amount 2.28 \
                         --merchant Amazon \
                         --description "USB cable" \
                         --purchase-date 2023-01-15 \
-                        --receipt-path "USB.pdf"
+                        # Optionally, you can attach multiple receipts by specifying this argument multiple times
+                        --receipt-path "USB.pdf" \
+                        # If you haven't configured OpenAI, you'll need to specify the benefit and category
+                        --benefit "Remote Life" \
+                        --category "Cables & Cords"
 ```
 
-6. We'll use OpenAI to figure out the benefit and category for your claim, and give you the chance to check the result.
+6. If you've configured OpenAI, you'll be given the chance to check the benefit and category it has inferred
 7. If you confirm the benefit and category by hitting Enter, your claim will be submitted.
-
-#### Submitting a single claim, specifying the benefit and category yourself
-
-1. Figure out what you're planning to claim for.
-2. Make sure you're logged in - for more details, see "Connecting to your Forma account" above.
-3. Get a list of your available benefits by running `formanator benefits`. 
-4. Pick the relevant benefit, and then run `formanator categories --benefit <benefit>` to get a list of categories. For example, running `formanator categories --benefit "Learning"` would return the applicable categories for the "Learning" benefit.
-5. Submit your claim by running `formanator submit-claim`. You'll need to pass a bunch of arguments:
-
-```bash
-formanator submit-claim --benefit "Remote Life" \
-                        --category "Cables & Cords" \
-                        --amount 2.28 \
-                        --merchant Amazon \
-                        --description "USB cable" \
-                        --purchase-date 2023-01-15 \
-                        --receipt-path "USB.pdf"
-```
-
-6. Your claim will be submitted.
 
 ### Submiting multiple claims
 
@@ -77,10 +64,12 @@ You can submit multiple claims at once by generating a template CSV, filling it 
 
 1. Make sure you're logged in - for more details, see "Connecting to your Forma account" above.
 2. Run `formanator generate-template-csv` to generate a CSV template. By default, the template will be saved as `claims.csv`. Optionally, you can specify the `--output-path` argument to choose where to save the template.
-3. Update the template, filling in the columns for each of your claims. To get valid `benefit` and `category` values, use the `formanator benefits` and `formanator categories --benefit <benefit>` commands documented in "Submitting a single claim, specifying the benefit and category yourself" above.
-4. Validate the CSV up-front by running `formanator validate-csv --input-path claims.csv`.
-5. Submit your claims by running `formanator submit-claims-from-csv --input-path claims.csv`.
-6. Your claims will be submitted. If there are any validation errors with any of the rows, or if anything goes wrong during submission, an error message will be displayed, but the tool will continue submitting other claims.
+3. If you aren't using OpenAI to infer the benefit and category for each claim, you'll need to figure this out yourself. Get a list of your available benefits by running `formanator benefits`. Pick the relevant benefit, and then run `formanator categories --benefit <benefit>` to get a list of categories.
+4. Update the template, filling in the columns for each of your claims. If you've configured OpenAI, you can leave the `benefit` and `category` blank. If you want to attach multiple receipts, you can add comma-separated paths to the `receipt_path` column.
+5. Validate the CSV up-front by running `formanator validate-csv --input-path claims.csv`.
+6. Submit your claims by running `formanator submit-claims-from-csv --input-path claims.csv`.
+7. If you've configured OpenAI, you'll be given the chance to check the benefit and category it has inferred for each claim.
+8. Your claims will be submitted. If there are any validation errors with any of the rows, or if anything goes wrong during submission, an error message will be displayed, but the tool will continue submitting other claims.
 
 ## Contributing
 
