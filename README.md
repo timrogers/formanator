@@ -2,7 +2,7 @@
 
 Formanator allows you to submit benefit claims to [Forma](https://www.joinforma.com/) from the command line, either one-by-one or in bulk.
 
-![ray-so-export (2)](https://github.com/timrogers/formanator/assets/116134/ef4c9bf9-1e1f-4801-bbe3-c4dde69e5bf4)
+![Screenshot of running `formanator` from a terminal](https://github.com/timrogers/formanator/assets/116134/2979fda6-415c-4212-9263-7707841a03bf)
 
 ## Installation
 
