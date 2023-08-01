@@ -97,6 +97,8 @@ command
         );
       }
 
+      const benefitsWithCategories = await getBenefitsWithCategories(accessToken);
+
       for (const [index, claim] of claims.entries()) {
         const rowNumber = index + 2;
         console.log(`Submitting claim ${index + 1}/${claims.length} (row ${rowNumber})`);
@@ -109,7 +111,6 @@ command
             );
             await createClaim(createClaimOptions);
           } else if (openaiApiKey) {
-            const benefitsWithCategories = await getBenefitsWithCategories(accessToken);
             const { benefit, category } = await attemptToInferCategoryAndBenefit({
               merchant: claim.merchant,
               description: claim.description,
