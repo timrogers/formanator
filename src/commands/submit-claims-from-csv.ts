@@ -5,15 +5,17 @@ import chalk from 'chalk';
 
 import { actionRunner, serializeError } from '../utils.js';
 import { getAccessToken } from '../config.js';
-import { createClaim } from '../forma.js';
+import { createClaim, getBenefitsWithCategories } from '../forma.js';
 import { type Claim, claimParamsToCreateClaimOptions } from '../claims.js';
 import VERSION from '../version.js';
+import { attemptToInferCategoryAndBenefit } from '../openai.js';
 
 const command = new commander.Command();
 
 interface Arguments {
   accessToken?: string;
   inputPath: string;
+  openaiApiKey: string;
 }
 
 const EXPECTED_HEADERS = [
@@ -66,8 +68,15 @@ command
   )
   .requiredOption('--input-path <input_path>', 'The path to the CSV to read claims from')
   .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
+  .option(
+    '--openai-api-key <openai_token>',
+    'An optional OpenAI API key used to infer the benefit and category based on the merchant and description. If this is set, you may omit the `--benefit` and `--category` options. This can also be configured using the `OPENAI_API_KEY` environment variable.',
+    process.env.OPENAI_API_KEY,
+  )
   .action(
     actionRunner(async (opts: Arguments) => {
+      const { openaiApiKey } = opts;
+
       const accessToken = opts.accessToken ?? getAccessToken();
 
       if (!accessToken) {
@@ -92,14 +101,37 @@ command
         console.log(`Submitting claim ${index + 1}/${claims.length}`);
 
         try {
-          const createClaimOptions = await claimParamsToCreateClaimOptions(
-            claim,
-            accessToken,
-          );
-          await createClaim(createClaimOptions);
-          console.log(
-            chalk.green(`Successfully submitted claim ${index + 1}/${claims.length}`),
-          );
+          if (claim.benefit !== '' && claim.category !== '') {
+            const createClaimOptions = await claimParamsToCreateClaimOptions(
+              claim,
+              accessToken,
+            );
+            await createClaim(createClaimOptions);
+            console.log(
+              chalk.green(`Successfully submitted claim ${index + 1}/${claims.length}`),
+            );
+          } else if (openaiApiKey) {
+            const benefitsWithCategories = await getBenefitsWithCategories(accessToken);
+            const { benefit, category } = await attemptToInferCategoryAndBenefit({
+              merchant: claim.merchant,
+              description: claim.description,
+              benefitsWithCategories,
+              openaiApiKey,
+            });
+
+            const createClaimOptions = await claimParamsToCreateClaimOptions(
+              { ...claim, benefit, category },
+              accessToken,
+            );
+            await createClaim(createClaimOptions);
+            console.log(
+              chalk.green(`Successfully submitted claim ${index + 1}/${claims.length}`),
+            );
+          } else {
+            throw new Error(
+              'You must either fill out the `benefit` and `category` columns, or specify an OpenAI API key.',
+            );
+          }
         } catch (e) {
           console.error(
             chalk.red(
