@@ -14,6 +14,7 @@ export const actionRunner = (fn: (...args) => Promise<any>) => {
 
 export const serializeError = (e: any): string => {
   if (typeof e === 'string') return e;
+  if (e instanceof Error) return e.message;
   return JSON.stringify(e);
 };
 
