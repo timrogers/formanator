@@ -22,7 +22,7 @@ interface Arguments {
   category?: string;
   purchaseDate: string;
   description: string;
-  receiptPath: string;
+  receiptPath: string[];
   openaiApiKey?: string;
 }
 
@@ -133,8 +133,8 @@ command
   )
   .requiredOption('--description <description>', 'The description of the claim')
   .requiredOption(
-    '--receipt-path <receipt-path>',
-    'The path of the receipt. JPEG, PNG, PDF and HEIC files up to 10MB are accepted.',
+    '--receipt-path <receipt-path...>',
+    'The path of the receipt. JPEG, PNG, PDF and HEIC files up to 10MB are accepted. You may specify this argument multiple times to attach multiple receipts.',
   )
   .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
   .option(

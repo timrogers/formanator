@@ -47,7 +47,10 @@ const readClaimsFromCsv = async (inputPath: string): Promise<Claim[]> => {
           );
         }
 
-        claims.push(row as Claim);
+        const receiptPath = row.receiptPath.split(',').map((path) => path.trim());
+        const claim: Claim = { ...row, receiptPath };
+
+        claims.push(claim);
       })
       .on('end', () => {
         resolve(claims);
@@ -59,7 +62,7 @@ command
   .name('submit-claims-from-csv')
   .version(VERSION)
   .description(
-    'Submit multiple Forms claims from a CSV. To generate a template CSV to fill in, use the `generate-template-csv` command.',
+    'Submit multiple Forms claims from a CSV. To generate a template CSV to fill in, use the `generate-template-csv` command. You may attach multiple receipts to a claim by filling the `receipt_path` column with comma-separated paths.',
   )
   .requiredOption('--input-path <input_path>', 'The path to the CSV to read claims from')
   .option('--access-token <access_token>', 'Access token used to authenticate with Forma')

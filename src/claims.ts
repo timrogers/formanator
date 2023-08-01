@@ -9,7 +9,7 @@ export interface Claim {
   merchant: string;
   purchaseDate: string;
   description: string;
-  receiptPath: string;
+  receiptPath: string[];
 }
 
 const PURCHASE_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -42,8 +42,12 @@ export const claimParamsToCreateClaimOptions = async (
   if (!isValidPurchaseDate(claim.purchaseDate))
     throw new Error('Purchase date must be in YYYY-MM-DD format.');
   if (!isValidAmount(claim.amount)) throw new Error('Amount must be in the format 0.00.');
-  if (!existsSync(claim.receiptPath))
-    throw new Error(`Receipt path '${claim.receiptPath}' does not exist.`);
+
+  for (const path of claim.receiptPath) {
+    if (!existsSync(path)) {
+      throw new Error(`Receipt path '${path}' does not exist.`);
+    }
+  }
 
   return {
     ...claim,
