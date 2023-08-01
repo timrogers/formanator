@@ -78,8 +78,9 @@ You can submit multiple claims at once by generating a template CSV, filling it 
 1. Make sure you're logged in - for more details, see "Connecting to your Forma account" above.
 2. Run `formanator generate-template-csv` to generate a CSV template. By default, the template will be saved as `claims.csv`. Optionally, you can specify the `--output-path` argument to choose where to save the template.
 3. Update the template, filling in the columns for each of your claims. To get valid `benefit` and `category` values, use the `formanator benefits` and `formanator categories --benefit <benefit>` commands documented in "Submitting a single claim, specifying the benefit and category yourself" above.
-4. Submit your claims by running `formanator submit-claims-from-csv --input-path claims.csv`.
-5. Your claims will be submitted. If there are any validation errors with any of the rows, or if anything goes wrong during submission, an error message will be displayed, but the tool will continue submitting other claims.
+4. Validate the CSV up-front by running `formanator validate-csv --input-path claims.csv`.
+5. Submit your claims by running `formanator submit-claims-from-csv --input-path claims.csv`.
+6. Your claims will be submitted. If there are any validation errors with any of the rows, or if anything goes wrong during submission, an error message will be displayed, but the tool will continue submitting other claims.
 
 ## Contributing
 
