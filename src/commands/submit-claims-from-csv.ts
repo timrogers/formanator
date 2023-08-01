@@ -98,7 +98,8 @@ command
       }
 
       for (const [index, claim] of claims.entries()) {
-        console.log(`Submitting claim ${index + 1}/${claims.length}`);
+        const rowNumber = index + 2;
+        console.log(`Submitting claim ${index + 1}/${claims.length} (row ${rowNumber})`);
 
         try {
           if (claim.benefit !== '' && claim.category !== '') {
@@ -107,9 +108,6 @@ command
               accessToken,
             );
             await createClaim(createClaimOptions);
-            console.log(
-              chalk.green(`Successfully submitted claim ${index + 1}/${claims.length}`),
-            );
           } else if (openaiApiKey) {
             const benefitsWithCategories = await getBenefitsWithCategories(accessToken);
             const { benefit, category } = await attemptToInferCategoryAndBenefit({
@@ -124,20 +122,25 @@ command
               accessToken,
             );
             await createClaim(createClaimOptions);
-            console.log(
-              chalk.green(`Successfully submitted claim ${index + 1}/${claims.length}`),
-            );
           } else {
             throw new Error(
               'You must either fill out the `benefit` and `category` columns, or specify an OpenAI API key.',
             );
           }
+
+          console.log(
+            chalk.green(
+              `Successfully submitted claim ${index + 1}/${
+                claims.length
+              } (row ${rowNumber})`,
+            ),
+          );
         } catch (e) {
           console.error(
             chalk.red(
               `Error submitting claim ${index + 1}/${claims.length}: ${serializeError(
                 e,
-              )}`,
+              )} (row ${rowNumber})`,
             ),
           );
         }
