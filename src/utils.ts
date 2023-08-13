@@ -8,7 +8,7 @@ const actionErrorHandler = (error: Error): void => {
   process.exit(1);
 };
 
-export const actionRunner = (fn: (...args) => Promise<unknown>) => {
+export const actionRunner = (fn: (...args) => Promise<void>) => {
   return async (...args) => await fn(...args).catch(actionErrorHandler);
 };
 
