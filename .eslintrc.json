@@ -3,8 +3,9 @@
     "browser": true,
     "es2021": true
   },
-  "extends": ["standard-with-typescript", "prettier"],
-  "plugins": ["prettier"],
+  "extends": ["prettier", "eslint:recommended", "plugin:@typescript-eslint/recommended"],
+  "plugins": ["prettier", "@typescript-eslint"],
+  "parser": "@typescript-eslint/parser",
   "overrides": [
   ],
   "parserOptions": {
