@@ -18,4 +18,6 @@ export const serializeError = (e: unknown): string => {
   return JSON.stringify(e);
 };
 
-export const validateAxiosStatus = (_status: number): boolean => true;
+// This function gets passed the HTTP status code, but we're always going to return true,
+// so we don't need to declare the parameter
+export const validateAxiosStatus = (): boolean => true;
