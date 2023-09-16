@@ -1,4 +1,4 @@
-import { Configuration, OpenAIApi } from 'openai';
+import OpenAI from 'openai';
 import chalk from 'chalk';
 
 import { prompt } from './utils.js';
@@ -12,11 +12,9 @@ export const attemptToInferCategoryAndBenefit = async (opts: {
 }): Promise<{ category: string; benefit: string }> => {
   const { merchant, description, benefitsWithCategories, openaiApiKey: apiKey } = opts;
 
-  const configuration = new Configuration({
+  const openai = new OpenAI({
     apiKey,
   });
-
-  const openai = new OpenAIApi(configuration);
 
   const categoriesWithBenefits = benefitsWithCategories.flatMap((benefit) =>
     benefit.categories.map((category) => ({ ...category, benefit })),
@@ -28,7 +26,7 @@ export const attemptToInferCategoryAndBenefit = async (opts: {
 
   const content = generateOpenaiPrompt({ validCategories, merchant, description });
 
-  const chatCompletion = await openai.createChatCompletion({
+  const chatCompletion = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
     messages: [
       {
@@ -38,12 +36,12 @@ export const attemptToInferCategoryAndBenefit = async (opts: {
     ],
   });
 
-  const returnedCategoryAsString = chatCompletion.data.choices[0].message?.content;
+  const returnedCategoryAsString = chatCompletion.choices[0].message?.content;
 
   if (!returnedCategoryAsString) {
     throw new Error(
       `Something went wrong while inferring the benefit and category for your claim. OpenAI returned an unexpected response: ${JSON.stringify(
-        chatCompletion.data,
+        chatCompletion,
       )}`,
     );
   }
