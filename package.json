@@ -41,7 +41,7 @@
   "devDependencies": {
     "@types/cli-table": "^0.3.1",
     "@types/prompt-sync": "^4.2.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.2",
+    "@typescript-eslint/eslint-plugin": "^8.8.0",
     "@typescript-eslint/parser": "^7.0.2",
     "eslint": "^8.46.0",
     "eslint-config-prettier": "^9.0.0",
