@@ -43,7 +43,7 @@
     "@types/node": "^22.7.5",
     "@types/prompt-sync": "^4.2.0",
     "@typescript-eslint/eslint-plugin": "^8.8.1",
-    "@typescript-eslint/parser": "^7.0.2",
+    "@typescript-eslint/parser": "^8.8.1",
     "eslint": "^8.46.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",
