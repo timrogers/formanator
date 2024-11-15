@@ -58,7 +58,7 @@ formanator submit-claim --amount 2.28 \
 6. If you've configured OpenAI, you'll be given the chance to check the benefit and category it has inferred
 7. If you confirm the benefit and category by hitting Enter, your claim will be submitted.
 
-### Submiting multiple claims
+### Submitting multiple claims
 
 You can submit multiple claims at once by generating a template CSV, filling it in, then submitting the whole CSV.
 
