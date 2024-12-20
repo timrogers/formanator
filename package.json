@@ -9,8 +9,8 @@
     "build": "npx tsc -p tsconfig.json",
     "prepublish": "npm run build",
     "prepack": "node script/generate-version-file.cjs > dist/version.js",
-    "lint": "eslint . --ext .ts",
-    "lint-and-fix": "eslint . --ext .ts --fix",
+    "lint": "eslint .",
+    "lint-and-fix": "eslint . --fix",
     "semantic-release": "semantic-release",
     "dev": "npx ts-node --esm src/index.ts"
   },
