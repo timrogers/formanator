@@ -42,4 +42,7 @@ export default [
             "prettier/prettier": "error",
         },
     },
+    {
+        ignores: ["dist/*", "script/*", "eslint.config.mjs"],
+    }
 ];
