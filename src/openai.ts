@@ -8,13 +8,32 @@ export const attemptToInferCategoryAndBenefit = async (opts: {
   merchant: string;
   description: string;
   benefitsWithCategories: BenefitWithCategories[];
-  openaiApiKey: string;
+  openaiApiKey?: string;
+  githubToken?: string;
 }): Promise<{ category: string; benefit: string }> => {
-  const { merchant, description, benefitsWithCategories, openaiApiKey: apiKey } = opts;
+  const { merchant, description, benefitsWithCategories, openaiApiKey, githubToken } = opts;
 
-  const openai = new OpenAI({
-    apiKey,
-  });
+  if (openaiApiKey && githubToken)
+    console.log(chalk.yellow('Warning: You have provided both an OpenAI API Key and a GitHub Token. Defaulting to using OpenAI.'))
+
+  let openai: OpenAI
+  let model = 'gpt-3.5-turbo'
+  if (openaiApiKey) {
+    openai = new OpenAI({
+      apiKey: openaiApiKey
+    })
+  } else if (githubToken) {
+    openai = new OpenAI({
+      baseURL: 'https://models.github.ai/inference',
+      apiKey: githubToken,
+    });
+    model = 'openai/gpt-4.1'
+  } else {
+    throw new Error(
+      'You must either specify a GitHub Token or OpenAI API Key',
+    );
+  }
+
 
   const categoriesWithBenefits = benefitsWithCategories.flatMap((benefit) =>
     benefit.categories.map((category) => ({ ...category, benefit })),
@@ -27,7 +46,7 @@ export const attemptToInferCategoryAndBenefit = async (opts: {
   const content = generateOpenaiPrompt({ validCategories, merchant, description });
 
   const chatCompletion = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
+    model,
     messages: [
       {
         role: 'user',
@@ -59,7 +78,7 @@ export const attemptToInferCategoryAndBenefit = async (opts: {
   }
 
   console.log(
-    `OpenAI inferred that you should claim using the ${chalk.magenta(
+    `${openaiApiKey ? 'OpenAI' : 'GitHub Models'} inferred that you should claim using the ${chalk.magenta(
       returnedCategory.benefit.name,
     )} benefit and ${chalk.magenta(
       returnedCategoryAsString,

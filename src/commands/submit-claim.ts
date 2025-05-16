@@ -20,6 +20,7 @@ interface Arguments {
   description: string;
   receiptPath: string[];
   openaiApiKey?: string;
+  githubToken?: string;
 }
 
 command
@@ -51,9 +52,14 @@ command
     'An optional OpenAI API key used to infer the benefit and category based on the merchant and description. If this is set, you may omit the `--benefit` and `--category` options. This can also be configured using the `OPENAI_API_KEY` environment variable.',
     process.env.OPENAI_API_KEY,
   )
+  .option(
+    '--github-token <github-token>',
+    'An optinoal GitHub Token to use GitHub Models to infer the benefit and category based on the merchant and description. If this is set, you may omit the `--benefit` and `--category` options. This can also be configured using the `GITHUB_TOKEN` environment variable.',
+    process.env.GITHUB_TOKEN,
+  )
   .action(
     actionRunner(async (opts: Arguments) => {
-      const { benefit, category, openaiApiKey } = opts;
+      const { benefit, category, openaiApiKey, githubToken } = opts;
 
       const accessToken = opts.accessToken ?? getAccessToken();
 
@@ -68,14 +74,14 @@ command
           { ...opts, benefit, category },
           accessToken,
         );
-        await createClaim(createClaimOptions);
-      } else if (openaiApiKey) {
+      } else if (openaiApiKey || githubToken) {
         const benefitsWithCategories = await getBenefitsWithCategories(accessToken);
         const { benefit, category } = await attemptToInferCategoryAndBenefit({
           merchant: opts.merchant,
           description: opts.description,
           benefitsWithCategories,
           openaiApiKey,
+          githubToken,
         });
 
         const createClaimOptions = await claimParamsToCreateClaimOptions(
@@ -85,7 +91,7 @@ command
         await createClaim(createClaimOptions);
       } else {
         throw new Error(
-          'You must either specify --benefit and --category, or an OpenAI API key.',
+          'You must either specify --benefit and --category, GitHub Token, or an OpenAI API key.',
         );
       }
 
