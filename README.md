@@ -36,6 +36,15 @@ If you want to use OpenAI to infer the benefit and category, you'll need to set 
 2. Create an [OpenAI API key](https://platform.openai.com/account/api-keys).
 3. Set the API key as the `OPENAI_API_KEY` environment variable, or be prepared to pass the `--openai-api-key` argument to every command.
 
+### Configuring GitHub Models for inferring the benefit and category
+
+[GitHub Models](https://github.blog/news-insights/product-news/introducing-github-models/) gives a generous free tier for various AI models. If you prefer, you can use GitHub Models instead of OpenAI directly.
+
+To use GitHub Models to infer the benefit and category, you'll need to set it up.
+
+1. Create a [GitHub Token](https://github.com/settings/personal-access-tokens) with read access to GitHub Models.
+2. Set the Token as the `GITHUB_TOKEN` environment variable, or be prepared to pass the `--github-token` argument to every command.
+
 ### Submitting a single claim
 
 1. Figure out what you're planning to claim for.
