@@ -19,7 +19,10 @@ npm install -g formanator
 To get started, you'll need to connect Formanator to your Forma account. Here's how the process works:
 
 1. Run `formanator login`.
-2. At the prompt, enter your email address, then hit Enter.
+2. Provide your email in one of the three ways:
+    1. At the prompt, enter your email address, then hit Enter.
+    2. Set the `FORMA_EMAIL` environment variable
+    3. Use the `--email` argument
 3. You'll be sent an email with a magic link. Go to your inbox and copy the link to your clipboard.
 4. At the prompt, paste your magic link, then hit Enter.
 5. You'll be logged in 🥳
