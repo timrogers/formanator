@@ -73,7 +73,7 @@ export const attemptToInferCategoryAndBenefit = async (opts: {
 
   if (!returnedCategoryAsString) {
     throw new Error(
-      `Something went wrong while inferring the benefit and category for your claim. OpenAI returned an unexpected response: ${JSON.stringify(
+      `Something went wrong while inferring the benefit and category for your claim. The LLM returned an unexpected response: ${JSON.stringify(
         chatCompletion,
       )}`,
     );
@@ -87,12 +87,12 @@ export const attemptToInferCategoryAndBenefit = async (opts: {
 
   if (!returnedCategory) {
     throw new Error(
-      `Something went wrong while inferring the benefit and category for your claim. OpenAI returned a response that wasn't a valid category: ${returnedCategoryAsString}`,
+      `Something went wrong while inferring the benefit and category for your claim. The LLM returned a response that wasn't a valid category: ${returnedCategoryAsString}`,
     );
   }
 
   console.log(
-    `${openaiApiKey ? 'OpenAI' : 'GitHub Models'} inferred that you should claim using the ${chalk.magenta(
+    `The LLM inferred that you should claim using the ${chalk.magenta(
       returnedCategory.benefit.name,
     )} benefit and ${chalk.magenta(
       returnedCategoryAsString,
@@ -165,7 +165,7 @@ export const attemptToInferAllFromReceipt = async (opts: {
 
   if (!returnedResponseAsString) {
     throw new Error(
-      `Something went wrong while inferring claim details from your receipt. OpenAI returned an unexpected response: ${JSON.stringify(
+      `Something went wrong while inferring claim details from your receipt. The LLM returned an unexpected response: ${JSON.stringify(
         chatCompletion,
       )}`,
     );
@@ -188,7 +188,7 @@ export const attemptToInferAllFromReceipt = async (opts: {
 
   if (!matchingBenefit) {
     throw new Error(
-      `Something went wrong while inferring the claim details. OpenAI returned a benefit that wasn't valid: ${parsedResponse.benefit}`,
+      `Something went wrong while inferring the claim details. The LLM returned a benefit that wasn't valid: ${parsedResponse.benefit}`,
     );
   }
 
