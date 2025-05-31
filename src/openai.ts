@@ -269,22 +269,28 @@ const convertToImageIfNeeded = async (filePath: string): Promise<string> => {
   const fileExtension = extname(filePath).toLowerCase();
 
   if (fileExtension === '.pdf') {
-    // Import pdf2pic dynamically to handle potential import issues
-    const { fromPath } = await import('pdf2pic');
+    try {
+      // Dynamic import to handle CommonJS module
+      const pdf2pic = await import('pdf2pic');
 
-    const convertOptions = {
-      density: 100, // output pixels per inch
-      saveFilename: 'page', // output file name
-      savePath: '/tmp', // output directory
-      format: 'jpeg', // output format
-      width: 2000, // output width
-      height: 2000, // output height
-    };
+      const convertOptions = {
+        density: 100, // output pixels per inch
+        saveFilename: 'page', // output file name
+        savePath: '/tmp', // output directory
+        format: 'jpeg', // output format
+        width: 2000, // output width
+        height: 2000, // output height
+      };
 
-    const convert = fromPath(filePath, convertOptions);
-    const result = await convert(1, { responseType: 'image' }); // Convert first page only
+      const convert = pdf2pic.fromPath(filePath, convertOptions);
+      const result = await convert(1, { responseType: 'image' }); // Convert first page only
 
-    return result.path as string;
+      return result.path as string;
+    } catch (error) {
+      throw new Error(
+        `Failed to convert PDF to image. Please ensure GraphicsMagick and Ghostscript are installed on your system, or use JPEG/PNG receipts instead. Error: ${error}`,
+      );
+    }
   }
 
   // For non-PDF files (JPEG, PNG, HEIC), return the original path
