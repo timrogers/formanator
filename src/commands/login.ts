@@ -90,7 +90,11 @@ command
   .name('login')
   .version(VERSION)
   .description('Connect Formanator to your Forma account with a magic link')
-  .option('--email <email>', 'Email address used to log in to Forma', process.env.FORMA_EMAIL)
+  .option(
+    '--email <email>',
+    'Email address used to log in to Forma',
+    process.env.FORMA_EMAIL,
+  )
   .action(
     actionRunner(async (opts: Arguments) => {
       const email = opts.email ?? promptForEmail();
