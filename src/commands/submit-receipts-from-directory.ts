@@ -35,30 +35,51 @@ const getReceiptFiles = (directory: string): string[] => {
     throw new Error(`Directory '${directory}' does not exist.`);
   }
 
-  const files = readdirSync(directory);
-  return files.filter(isSupportedReceiptFile).map((file) => join(directory, file));
+  try {
+    const files = readdirSync(directory);
+    return files.filter(isSupportedReceiptFile).map((file) => join(directory, file));
+  } catch (error) {
+    throw new Error(
+      `Could not read directory '${directory}': ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
 };
 
 // Helper function to move file to processed directory
 const moveFileToProcessed = (sourceFile: string, processedDir: string): void => {
-  if (!existsSync(processedDir)) {
-    mkdirSync(processedDir, { recursive: true });
+  try {
+    if (!existsSync(processedDir)) {
+      mkdirSync(processedDir, { recursive: true });
+    }
+
+    const filename = basename(sourceFile);
+    const destinationFile = join(processedDir, filename);
+
+    // If destination file already exists, add a timestamp suffix
+    let finalDestination = destinationFile;
+    if (existsSync(destinationFile)) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const ext = extname(filename);
+      const nameWithoutExt = basename(filename, ext);
+      finalDestination = join(processedDir, `${nameWithoutExt}-${timestamp}${ext}`);
+    }
+
+    renameSync(sourceFile, finalDestination);
+    console.log(chalk.blue(`Moved processed receipt to: ${finalDestination}`));
+  } catch (error) {
+    console.error(
+      chalk.red(
+        `Warning: Could not move file ${sourceFile} to processed directory: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      ),
+    );
+    console.error(
+      chalk.red('The claim was submitted successfully, but the file was not moved.'),
+    );
   }
-
-  const filename = basename(sourceFile);
-  const destinationFile = join(processedDir, filename);
-
-  // If destination file already exists, add a timestamp suffix
-  let finalDestination = destinationFile;
-  if (existsSync(destinationFile)) {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const ext = extname(filename);
-    const nameWithoutExt = basename(filename, ext);
-    finalDestination = join(processedDir, `${nameWithoutExt}-${timestamp}${ext}`);
-  }
-
-  renameSync(sourceFile, finalDestination);
-  console.log(chalk.blue(`Moved processed receipt to: ${finalDestination}`));
 };
 
 command

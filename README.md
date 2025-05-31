@@ -114,9 +114,42 @@ formanator submit-claim --amount 2.28 \
 
 ### Submitting multiple claims
 
-You can submit multiple claims at once by generating a template CSV, filling it in, then submitting the whole CSV.
+You can submit multiple claims at once using two approaches:
 
-**Note**: The CSV workflow currently supports benefit/category inference but not full receipt inference. For full receipt inference, submit claims individually using the single claim workflow above.
+#### Option 1: Process receipts from a directory (recommended)
+
+If you have a directory full of receipt images, you can process them all at once with full receipt inference:
+
+```bash
+formanator submit-receipts-from-directory --directory ./receipts --openai-api-key YOUR_API_KEY
+# or if you've set OPENAI_API_KEY environment variable:
+formanator submit-receipts-from-directory --directory ./receipts
+```
+
+This command will:
+1. Find all supported receipt files (.jpg, .jpeg, .png, .pdf, .heic) in the specified directory
+2. Use OpenAI to analyze each receipt and extract all claim details
+3. Show you the extracted details for each receipt and ask for confirmation (Y/N)
+4. Submit approved claims to Forma
+5. Move successfully processed receipts to a `processed/` subdirectory (ensuring idempotence)
+
+**Options:**
+- `--directory`: The directory containing receipt files (required)
+- `--processed-directory`: Custom directory for processed receipts (defaults to `processed/` subdirectory)
+- `--openai-api-key` or `--github-token`: API key for receipt inference (required)
+
+**Example with custom processed directory:**
+```bash
+formanator submit-receipts-from-directory --directory ./receipts --processed-directory ./completed
+```
+
+When you run the command again, it will only process receipts that haven't been moved to the processed directory yet.
+
+#### Option 2: CSV workflow
+
+You can also submit multiple claims using a CSV template (supports benefit/category inference but not full receipt inference):
+
+**Note**: The CSV workflow currently supports benefit/category inference but not full receipt inference. For full receipt inference, use the directory processing approach above or submit claims individually.
 
 1. Make sure you're logged in - for more details, see "Connecting to your Forma account" above.
 2. Run `formanator generate-template-csv` to generate a CSV template. By default, the template will be saved as `claims.csv`. Optionally, you can specify the `--output-path` argument to choose where to save the template.
