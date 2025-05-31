@@ -11,29 +11,31 @@ export const attemptToInferCategoryAndBenefit = async (opts: {
   openaiApiKey?: string;
   githubToken?: string;
 }): Promise<{ category: string; benefit: string }> => {
-  const { merchant, description, benefitsWithCategories, openaiApiKey, githubToken } = opts;
+  const { merchant, description, benefitsWithCategories, openaiApiKey, githubToken } =
+    opts;
 
   if (openaiApiKey && githubToken)
-    console.log(chalk.yellow('Warning: You have provided both an OpenAI API Key and a GitHub Token. Defaulting to using OpenAI.'))
+    console.log(
+      chalk.yellow(
+        'Warning: You have provided both an OpenAI API Key and a GitHub Token. Defaulting to using OpenAI.',
+      ),
+    );
 
-  let openai: OpenAI
-  let model = 'gpt-3.5-turbo'
+  let openai: OpenAI;
+  let model = 'gpt-3.5-turbo';
   if (openaiApiKey) {
     openai = new OpenAI({
-      apiKey: openaiApiKey
-    })
+      apiKey: openaiApiKey,
+    });
   } else if (githubToken) {
     openai = new OpenAI({
       baseURL: 'https://models.github.ai/inference',
       apiKey: githubToken,
     });
-    model = 'openai/gpt-4.1'
+    model = 'openai/gpt-4.1';
   } else {
-    throw new Error(
-      'You must either specify a GitHub Token or OpenAI API Key',
-    );
+    throw new Error('You must either specify a GitHub Token or OpenAI API Key');
   }
-
 
   const categoriesWithBenefits = benefitsWithCategories.flatMap((benefit) =>
     benefit.categories.map((category) => ({ ...category, benefit })),
