@@ -66,7 +66,7 @@ command
   )
   .option(
     '--github-token <github-token>',
-    'An optinoal GitHub Token to use GitHub Models to infer the benefit and category based on the merchant and description. If this is set, you may omit the `--benefit` and `--category` options. This can also be configured using the `GITHUB_TOKEN` environment variable.',
+    'An optional GitHub Token to use GitHub Models to infer the benefit and category based on the merchant and description. If this is set, you may omit the `--benefit` and `--category` options. This can also be configured using the `GITHUB_TOKEN` environment variable.',
     process.env.GITHUB_TOKEN,
   )
   .action(
