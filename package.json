@@ -27,6 +27,7 @@
     "cli-table": "^0.3.11",
     "commander": "^13.1.0",
     "openai": "^5.0.1",
+    "pdf2pic": "^3.2.0",
     "prompt-sync": "^4.2.0"
   },
   "repository": {
