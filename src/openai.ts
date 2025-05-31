@@ -202,11 +202,41 @@ export const attemptToInferAllFromReceipt = async (opts: {
 
   if (!returnedCategory) {
     throw new Error(
-      `Something went wrong while inferring the claim details. OpenAI returned a category that wasn't valid for the benefit: ${parsedResponse.category}`,
+      `Something went wrong while inferring the claim details. The LLM returned a category that wasn't valid for the benefit: ${parsedResponse.category}`,
     );
   }
 
-  console.log(chalk.cyan('OpenAI inferred the following details from your receipt:'));
+  // Validate the date format
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(parsedResponse.purchaseDate)) {
+    throw new Error(
+      `Something went wrong while inferring the claim details. The LLM returned an invalid date format: ${parsedResponse.purchaseDate}. It should be in YYYY-MM-DD format.`,
+    );
+  }
+
+  // Validate the amount format
+  const amountRegex = /^\d+(\.\d{1,2})?$/;
+  if (!amountRegex.test(parsedResponse.amount)) {
+    throw new Error(
+      `Something went wrong while inferring the claim details. The LLM returned an invalid amount format: ${parsedResponse.amount}. It should be a number with up to two decimal places.`,
+    );
+  }
+
+  // Validate that the merchant name is not empty
+  if (!parsedResponse.merchant || parsedResponse.merchant.trim() === '') {
+    throw new Error(
+      `Something went wrong while inferring the claim details. The LLM returned an empty merchant name: ${parsedResponse.merchant}`,
+    );
+  }
+
+  // Validate that the description is not empty
+  if (!parsedResponse.description || parsedResponse.description.trim() === '') {
+    throw new Error(
+      `Something went wrong while inferring the claim details. The LLM returned an empty description: ${parsedResponse.description}`,
+    );
+  }
+
+  console.log(chalk.cyan('The LLM inferred the following details from your receipt:'));
   console.log(`Amount: ${chalk.magenta(parsedResponse.amount)}`);
   console.log(`Merchant: ${chalk.magenta(parsedResponse.merchant)}`);
   console.log(`Purchase Date: ${chalk.magenta(parsedResponse.purchaseDate)}`);
