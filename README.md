@@ -29,11 +29,17 @@ To get started, you'll need to connect Formanator to your Forma account. Here's 
 
 To remember your login, Formanator stores a `.formanator.json` file in your home directory with your access token.
 
-### Configuring OpenAI for inferring the benefit and category
+### Configuring OpenAI for inferring claim details
 
-When submitting a claim, you need to specify a benefit and category for your claim. You can either decide that yourself, or you can have OpenAI do it for you, for a cost of about $0.001 (a tenth of a cent! 🪙) per claim 🧠
+When submitting a claim, you need to specify several details like amount, merchant, purchase date, description, benefit and category. You can either input these manually, or you can have OpenAI infer them from your receipt image using advanced vision models! 🤖👁️
 
-If you want to use OpenAI to infer the benefit and category, you'll need to set it up.
+OpenAI can help you in two ways:
+1. **Full Receipt Inference** (recommended): Analyze a receipt image and extract ALL claim details automatically 
+2. **Benefit/Category Inference**: Infer just the benefit and category based on merchant name and description you provide
+
+The cost is minimal - about $0.01-0.02 per receipt for full inference, or $0.001 for benefit/category only.
+
+If you want to use OpenAI to help with your claims, you'll need to set it up:
 
 1. Set up an OpenAI account and make sure you either (a) have free trial credit available or (b) have set up a payment method. You can check this on the ["Usage"](https://platform.openai.com/account/usage) page.
 2. Create an [OpenAI API key](https://platform.openai.com/account/api-keys).
@@ -50,29 +56,67 @@ To use GitHub Models to infer the benefit and category, you'll need to set it up
 
 ### Submitting a single claim
 
+You have several options for submitting a claim:
+
+#### Option 1: Full Receipt Inference with OpenAI (Easiest!)
+
+If you have configured OpenAI, you can simply provide a receipt image and let OpenAI extract ALL the details:
+
+```bash
+formanator submit-claim --receipt-path "receipt.jpg" --openai-api-key YOUR_API_KEY
+# or if you've set OPENAI_API_KEY environment variable:
+formanator submit-claim --receipt-path "receipt.jpg"
+```
+
+OpenAI will analyze your receipt and extract:
+- Amount
+- Merchant name  
+- Purchase date
+- Description of items
+- Appropriate benefit and category
+
+You'll be shown the extracted details and asked to confirm before submitting.
+
+**Supported receipt formats**: JPEG, PNG, PDF, and HEIC files (PDF requires GraphicsMagick and Ghostscript)
+
+#### Option 2: Manual Entry
+
 1. Figure out what you're planning to claim for.
 2. Make sure you're logged in - for more details, see "Connecting to your Forma account" above.
-3. If you aren't using OpenAI to infer the benefit and category, you'll need to figure this out yourself. Get a list of your available benefits by running `formanator benefits`. Pick the relevant benefit, and then run `formanator categories --benefit <benefit>` to get a list of categories.
-4. Submit your claim by running `formanator submit-claim`. You'll need to pass a bunch of arguments:
+3. If you aren't using OpenAI, you'll need to figure out the benefit and category yourself. Get a list of your available benefits by running `formanator benefits`. Pick the relevant benefit, and then run `formanator categories --benefit <benefit>` to get a list of categories.
+4. Submit your claim by running `formanator submit-claim` with all required details:
 
 ```bash
 formanator submit-claim --amount 2.28 \
                         --merchant Amazon \
                         --description "USB cable" \
                         --purchase-date 2023-01-15 \
-                        # Optionally, you can attach multiple receipts by specifying this argument multiple times
                         --receipt-path "USB.pdf" \
-                        # If you haven't configured OpenAI, you'll need to specify the benefit and category
                         --benefit "Remote Life" \
                         --category "Cables & Cords"
 ```
 
-6. If you've configured OpenAI, you'll be given the chance to check the benefit and category it has inferred
-7. If you confirm the benefit and category by hitting Enter, your claim will be submitted.
+#### Option 3: Partial OpenAI Assistance
+
+If you want to provide some details manually but let OpenAI infer the benefit and category:
+
+```bash
+formanator submit-claim --amount 2.28 \
+                        --merchant Amazon \
+                        --description "USB cable" \
+                        --purchase-date 2023-01-15 \
+                        --receipt-path "USB.pdf" \
+                        --openai-api-key YOUR_API_KEY
+```
+
+5. If you've configured OpenAI, you'll be given the chance to review the inferred details.
+6. If you confirm by hitting Enter, your claim will be submitted.
 
 ### Submitting multiple claims
 
 You can submit multiple claims at once by generating a template CSV, filling it in, then submitting the whole CSV.
+
+**Note**: The CSV workflow currently supports benefit/category inference but not full receipt inference. For full receipt inference, submit claims individually using the single claim workflow above.
 
 1. Make sure you're logged in - for more details, see "Connecting to your Forma account" above.
 2. Run `formanator generate-template-csv` to generate a CSV template. By default, the template will be saved as `claims.csv`. Optionally, you can specify the `--output-path` argument to choose where to save the template.
