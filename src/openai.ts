@@ -277,20 +277,26 @@ const generateReceiptInferencePrompt = (opts: {
 }): string => {
   const { validCategories, validBenefits } = opts;
 
+  const validBenefitsAsList = validBenefits
+    .map((benefit) => `- \`${benefit}\``)
+    .join('\n');
+  const validCategoriesAsList = validCategories
+    .map((category) => `- \`${category}\``)
+    .join('\n');
   return `Your job is to analyze a receipt image and extract ALL required information for an expense claim. You must return a JSON object with the following fields:
 
 - amount: The total amount (e.g., "25.99")
 - merchant: The name of the merchant/store
 - purchaseDate: The date in YYYY-MM-DD format
 - description: A brief description of what was purchased
-- benefit: The most appropriate benefit category from the valid benefits list
-- category: The most appropriate category from the valid categories list
+- benefit: The most appropriate benefit category from the valid benefits list. Only benefits from the provided list are valid.
+- category: The most appropriate category from the valid categories list. Only categories from the provided list are valid.
 
 Valid benefits:
-${validBenefits.join('\n')}
+${validBenefitsAsList}
 
 Valid categories:
-${validCategories.join('\n')}
+${validCategoriesAsList}
 
 Return ONLY a valid JSON object with these exact field names. Do not include any other text or formatting.`;
 };
