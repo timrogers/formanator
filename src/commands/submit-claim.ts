@@ -74,6 +74,7 @@ command
           { ...opts, benefit, category },
           accessToken,
         );
+        await createClaim(createClaimOptions);
       } else if (openaiApiKey || githubToken) {
         const benefitsWithCategories = await getBenefitsWithCategories(accessToken);
         const { benefit, category } = await attemptToInferCategoryAndBenefit({
