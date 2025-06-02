@@ -4,8 +4,7 @@ Formanator allows you to **submit benefit claims to [Forma](https://www.joinform
 
 With the power of large language models 🧠👀 - free of charge thanks to [GitHub Models](https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models) - it can even **analyse your receipts and generate your claims automatically**.
 
-![Screenshot of running `formanator` from a terminal](https://github.com/timrogers/formanator/assets/116134/2979fda6-415c-4212-9263-7707841a03bf)
-
+![Screenshot of running `formanator` from a terminal](https://github.com/user-attachments/assets/e053efc8-f4cb-4ea1-8850-6c82d668bf29)
 
 # Installation
 
