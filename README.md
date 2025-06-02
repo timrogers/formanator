@@ -4,7 +4,7 @@ Formanator allows you to submit benefit claims to [Forma](https://www.joinforma.
 
 ![Screenshot of running `formanator` from a terminal](https://github.com/timrogers/formanator/assets/116134/2979fda6-415c-4212-9263-7707841a03bf)
 
-## Installation
+# Installation
 
 To install Formanator, make sure you have [Node.js](https://nodejs.org/en) installed, and then just run:
 
@@ -12,9 +12,15 @@ To install Formanator, make sure you have [Node.js](https://nodejs.org/en) insta
 npm install -g formanator
 ```
 
-## Usage
+To be able to automatically infer claim details from PDF receipts, you will also need to install Ghostscript and Graphicsmagick:
 
-### Connecting to your Forma account
+```bash
+brew install ghostscript graphicsmagick
+```
+
+# Usage
+
+## Connecting to your Forma account
 
 To get started, you'll need to connect Formanator to your Forma account. Here's how the process works:
 
@@ -29,46 +35,43 @@ To get started, you'll need to connect Formanator to your Forma account. Here's 
 
 To remember your login, Formanator stores a `.formanator.json` file in your home directory with your access token.
 
-### Configuring OpenAI for inferring claim details
+## Configuring GitHub Models or OpenAI for inferring claim details
 
-When submitting a claim, you need to specify several details like amount, merchant, purchase date, description, benefit and category. You can either input these manually, or you can have OpenAI infer them from your receipt image using advanced vision models! 🤖👁️
+When submitting a claim, you need to specify several details like amount, merchant, purchase date, description, benefit and category. You can either input these manually, or use a large language model (LLM) to infer them.
 
-OpenAI can help you in two ways:
-1. **Full Receipt Inference** (recommended): Analyze a receipt image and extract ALL claim details automatically 
-2. **Benefit/Category Inference**: Infer just the benefit and category based on merchant name and description you provide
+### Using GitHub Models to infer claim details
 
-The cost is minimal - about $0.01-0.02 per receipt for full inference, or $0.001 for benefit/category only.
+[GitHub Models](https://github.blog/news-insights/product-news/introducing-github-models/) gives a generous free tier for various AI models, so you can do this totally free of charge. 
 
-If you want to use OpenAI to help with your claims, you'll need to set it up:
+You'll just to configure a GitHub personal access token (PAT) with models access:
+
+1. Create a [GitHub Token](https://github.com/settings/personal-access-tokens) with read access to GitHub Models.
+2. Set the Token as the `GITHUB_TOKEN` environment variable, or be prepared to pass the `--github-token` argument to every command.
+
+### Using OpenAI to infer claim detils
+
+You can also use OpenAI's API to infer claim details. The cost is minimal, at $0.01-0.02 per receipt for full inference, or $0.001 for benefit/category only.
+
+You'll need to configure an OpenAI API key:
 
 1. Set up an OpenAI account and make sure you either (a) have free trial credit available or (b) have set up a payment method. You can check this on the ["Usage"](https://platform.openai.com/account/usage) page.
 2. Create an [OpenAI API key](https://platform.openai.com/account/api-keys).
 3. Set the API key as the `OPENAI_API_KEY` environment variable, or be prepared to pass the `--openai-api-key` argument to every command.
 
-### Configuring GitHub Models for inferring the benefit and category
-
-[GitHub Models](https://github.blog/news-insights/product-news/introducing-github-models/) gives a generous free tier for various AI models. If you prefer, you can use GitHub Models instead of OpenAI directly.
-
-To use GitHub Models to infer the benefit and category, you'll need to set it up.
-
-1. Create a [GitHub Token](https://github.com/settings/personal-access-tokens) with read access to GitHub Models.
-2. Set the Token as the `GITHUB_TOKEN` environment variable, or be prepared to pass the `--github-token` argument to every command.
-
-### Submitting a single claim
+## Submitting a single claim
 
 You have several options for submitting a claim:
 
-#### Option 1: Full Receipt Inference with OpenAI (Easiest!)
+### Option 1: Infer all claim details from receipt (recommended)
 
-If you have configured OpenAI, you can simply provide a receipt image and let OpenAI extract ALL the details:
+If you have configured GitHub Models or OpenAI, you can simply provide a receipt image and let the model extract ALL the details.
 
 ```bash
-formanator submit-claim --receipt-path "receipt.jpg" --openai-api-key YOUR_API_KEY
-# or if you've set OPENAI_API_KEY environment variable:
+# You'll need to set GITHUB_TOKEN or OPENAI_API_KEY, or specify --github-token or --openai-api-key
 formanator submit-claim --receipt-path "receipt.jpg"
 ```
 
-OpenAI will analyze your receipt and extract:
+The LLM will analyze your receipt and extract:
 - Amount
 - Merchant name  
 - Purchase date
@@ -79,12 +82,28 @@ You'll be shown the extracted details and asked to confirm before submitting.
 
 **Supported receipt formats**: JPEG, PNG, PDF, and HEIC files (PDF requires GraphicsMagick and Ghostscript)
 
-#### Option 2: Manual Entry
+### Option 2: Infer beenfit and category from claim details
 
-1. Figure out what you're planning to claim for.
-2. Make sure you're logged in - for more details, see "Connecting to your Forma account" above.
-3. If you aren't using OpenAI, you'll need to figure out the benefit and category yourself. Get a list of your available benefits by running `formanator benefits`. Pick the relevant benefit, and then run `formanator categories --benefit <benefit>` to get a list of categories.
-4. Submit your claim by running `formanator submit-claim` with all required details:
+If you want to provide some details manually, but let the model infer the benefit and category:
+
+```bash
+# You'll need to set GITHUB_TOKEN or OPENAI_API_KEY, or specify --github-token or --openai-api-key
+formanator submit-claim --amount 2.28 \
+                        --merchant Amazon \
+                        --description "USB cable" \
+                        --purchase-date 2023-01-15 \
+                        --receipt-path "USB.pdf"
+```
+
+You'll be given the chance to review the inferred details. If you confirm by hitting Enter, your claim will be submitted.
+
+### Option 2: Manual entry
+
+You can provide all claim details manually, with no LLM inference.
+
+1. Figure out the benefit and category for your claim. Get a list of your available benefits by running `formanator benefits`. Pick the relevant benefit, and then run `formanator categories --benefit <benefit>` to get a list of categories.
+
+2. Submit your claim by running `formanator submit-claim` with all required details:
 
 ```bash
 formanator submit-claim --amount 2.28 \
@@ -96,23 +115,7 @@ formanator submit-claim --amount 2.28 \
                         --category "Cables & Cords"
 ```
 
-#### Option 3: Partial OpenAI Assistance
-
-If you want to provide some details manually but let OpenAI infer the benefit and category:
-
-```bash
-formanator submit-claim --amount 2.28 \
-                        --merchant Amazon \
-                        --description "USB cable" \
-                        --purchase-date 2023-01-15 \
-                        --receipt-path "USB.pdf" \
-                        --openai-api-key YOUR_API_KEY
-```
-
-5. If you've configured OpenAI, you'll be given the chance to review the inferred details.
-6. If you confirm by hitting Enter, your claim will be submitted.
-
-### Submitting multiple claims
+## Submitting multiple claims
 
 You can submit multiple claims at once by generating a template CSV, filling it in, then submitting the whole CSV.
 
