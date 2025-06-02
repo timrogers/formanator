@@ -1,8 +1,11 @@
 # Formanator 🤖
 
-Formanator allows you to submit benefit claims to [Forma](https://www.joinforma.com/) from the command line, either one-by-one or in bulk.
+Formanator allows you to **submit benefit claims to [Forma](https://www.joinforma.com/) from the command line**, either one-by-one or in bulk.
+
+With the power of large language models 🧠👀 - free of charge thanks to [GitHub Models](https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models) - it can even **analyse your receipts and generate your claims automatically**.
 
 ![Screenshot of running `formanator` from a terminal](https://github.com/timrogers/formanator/assets/116134/2979fda6-415c-4212-9263-7707841a03bf)
+
 
 # Installation
 
@@ -57,6 +60,32 @@ You'll need to configure an OpenAI API key:
 1. Set up an OpenAI account and make sure you either (a) have free trial credit available or (b) have set up a payment method. You can check this on the ["Usage"](https://platform.openai.com/account/usage) page.
 2. Create an [OpenAI API key](https://platform.openai.com/account/api-keys).
 3. Set the API key as the `OPENAI_API_KEY` environment variable, or be prepared to pass the `--openai-api-key` argument to every command.
+
+## Submitting claims in bulk (recommended)
+
+### Automatically submitting all receipts in a directory (recommended)
+
+You can submit all receipts in a specific directory, using a large language model (LLM) to infer the claim details for each receipt.
+
+```bash
+# You'll need to set GITHUB_TOKEN or OPENAI_API_KEY, or specify --github-token or --openai-api-key
+formanator submit-claims-from-directory --directory input/
+```
+
+All JPG, PNG, PDF and HEIC receipts in the directory will be processed. The tool will allow you to confirm the details for each receipt before submitting.
+
+### Manually submitting receipts using a CSV template
+
+You can submit multiple claims at once by generating a template CSV, filling it in, then submitting the whole CSV. Optionally, the tool can infer the benefit and category for each claim.
+
+1. Make sure you're logged in - for more details, see "Connecting to your Forma account" above.
+2. Run `formanator generate-template-csv` to generate a CSV template. By default, the template will be saved as `claims.csv`. Optionally, you can specify the `--output-path` argument to choose where to save the template.
+3. If you aren't using OpenAI to infer the benefit and category for each claim, you'll need to figure this out yourself. Get a list of your available benefits by running `formanator benefits`. Pick the relevant benefit, and then run `formanator categories --benefit <benefit>` to get a list of categories.
+4. Update the template, filling in the columns for each of your claims. If you've configured OpenAI or GitHub Models, you can leave the `benefit` and `category` blank. If you want to attach multiple receipts, you can add comma-separated paths to the `receipt_path` column.
+5. Validate the CSV up-front by running `formanator validate-csv --input-path claims.csv`.
+6. Submit your claims by running `formanator submit-claims-from-csv --input-path claims.csv`.
+7. If you've configured OpenAI, you'll be given the chance to check the benefit and category it has inferred for each claim.
+8. Your claims will be submitted. If there are any validation errors with any of the rows, or if anything goes wrong during submission, an error message will be displayed, but the tool will continue submitting other claims.
 
 ## Submitting a single claim
 
@@ -115,20 +144,6 @@ formanator submit-claim --amount 2.28 \
                         --category "Cables & Cords"
 ```
 
-## Submitting multiple claims
-
-You can submit multiple claims at once by generating a template CSV, filling it in, then submitting the whole CSV.
-
-**Note**: The CSV workflow currently supports benefit/category inference but not full receipt inference. For full receipt inference, submit claims individually using the single claim workflow above.
-
-1. Make sure you're logged in - for more details, see "Connecting to your Forma account" above.
-2. Run `formanator generate-template-csv` to generate a CSV template. By default, the template will be saved as `claims.csv`. Optionally, you can specify the `--output-path` argument to choose where to save the template.
-3. If you aren't using OpenAI to infer the benefit and category for each claim, you'll need to figure this out yourself. Get a list of your available benefits by running `formanator benefits`. Pick the relevant benefit, and then run `formanator categories --benefit <benefit>` to get a list of categories.
-4. Update the template, filling in the columns for each of your claims. If you've configured OpenAI, you can leave the `benefit` and `category` blank. If you want to attach multiple receipts, you can add comma-separated paths to the `receipt_path` column.
-5. Validate the CSV up-front by running `formanator validate-csv --input-path claims.csv`.
-6. Submit your claims by running `formanator submit-claims-from-csv --input-path claims.csv`.
-7. If you've configured OpenAI, you'll be given the chance to check the benefit and category it has inferred for each claim.
-8. Your claims will be submitted. If there are any validation errors with any of the rows, or if anything goes wrong during submission, an error message will be displayed, but the tool will continue submitting other claims.
 
 ## Contributing
 
