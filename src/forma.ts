@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { createReadStream } from 'fs';
 
-import { validateAxiosStatus } from './utils.js';
+import { validateAxiosStatus, checkFor403Error } from './utils.js';
 
 interface Benefit {
   id: string;
@@ -129,6 +129,7 @@ const getProfile = async (accessToken: string): Promise<ProfileResponse> => {
   );
 
   if (response.status !== 200) {
+    checkFor403Error(response.status);
     throw new Error(
       `Something went wrong while fetching profile - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`,
     );
@@ -214,6 +215,7 @@ export const createClaim = async (opts: CreateClaimOptions): Promise<void> => {
   );
 
   if (response.status !== 201) {
+    checkFor403Error(response.status);
     throw new Error(
       `Something went wrong while submitting claim - expected \`201 Created\` response, got \`${response.status} ${response.statusText}\`.`,
     );
@@ -245,6 +247,7 @@ export const requestMagicLink = async (email: string): Promise<void> => {
   );
 
   if (response.status !== 200) {
+    checkFor403Error(response.status);
     throw new Error(
       `Something went wrong while requesting magic link - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`,
     );
@@ -283,6 +286,7 @@ export const exchangeIdAndTkForAccessToken = async (
   const response = await axios.get(requestUrl.toString());
 
   if (response.status !== 200) {
+    checkFor403Error(response.status);
     throw new Error(
       `Something went wrong while exchanging magic link for token - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`,
     );
