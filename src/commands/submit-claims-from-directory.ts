@@ -196,8 +196,7 @@ command
               { ...inferredDetails, receiptPath: [receiptFile] },
               accessToken,
             );
-            console.log({ createClaimOptions });
-            //await createClaim(createClaimOptions);
+            await createClaim(createClaimOptions);
 
             console.log(chalk.green(`✅ Claim submitted successfully for ${filename}`));
 
