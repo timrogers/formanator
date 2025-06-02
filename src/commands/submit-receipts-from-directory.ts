@@ -97,12 +97,12 @@ command
   .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
   .option(
     '--openai-api-key <openai_token>',
-    'An optional OpenAI API key used to infer claim details from receipt images. This can also be configured using the `OPENAI_API_KEY` environment variable.',
+    'An optional OpenAI API key used to infer claim details from receipt images. This can also be configured using the `OPENAI_API_KEY` environment variable. You must provide this or a --github-token.',
     process.env.OPENAI_API_KEY,
   )
   .option(
     '--github-token <github-token>',
-    'An optional GitHub Token to use GitHub Models to infer claim details from receipt images. This can also be configured using the `GITHUB_TOKEN` environment variable.',
+    'An optional GitHub Token to use GitHub Models to infer claim details from receipt images. This can also be configured using the `GITHUB_TOKEN` environment variable. You must provide this or an --openai-api-key.',
     process.env.GITHUB_TOKEN,
   )
   .action(
