@@ -98,6 +98,8 @@ command
       const hasSomeManualInputs =
         benefit || category || amount || merchant || purchaseDate || description;
 
+      const hasLlmInferenceKey = openaiApiKey || githubToken;
+
       if (hasAllManualInputs) {
         // Traditional mode: all details provided manually
         const createClaimOptions = await claimParamsToCreateClaimOptions(
@@ -113,7 +115,7 @@ command
           accessToken,
         );
         await createClaim(createClaimOptions);
-      } else if (!hasSomeManualInputs && (openaiApiKey || githubToken)) {
+      } else if (!hasSomeManualInputs && hasLlmInferenceKey) {
         // Receipt inference mode: no manual inputs, just receipt + OpenAI
         const benefitsWithCategories = await getBenefitsWithCategories(accessToken);
         const inferredDetails = await attemptToInferAllFromReceipt({
@@ -137,6 +139,7 @@ command
             description: description!,
             benefitsWithCategories,
             openaiApiKey,
+            githubToken,
           });
 
         if (!amount || !purchaseDate) {
