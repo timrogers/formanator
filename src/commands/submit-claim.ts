@@ -126,7 +126,9 @@ command
           githubToken,
         });
 
-        console.log(chalk.cyan('The LLM inferred the following details from your receipt:'));
+        console.log(
+          chalk.cyan('The LLM inferred the following details from your receipt:'),
+        );
         console.log(`Amount: ${chalk.magenta(inferredDetails.amount)}`);
         console.log(`Merchant: ${chalk.magenta(inferredDetails.merchant)}`);
         console.log(`Purchase Date: ${chalk.magenta(inferredDetails.purchaseDate)}`);
