@@ -32,27 +32,27 @@ command
   .description('Submit a claim for a Forma benefit')
   .option(
     '--benefit <benefit>',
-    'The benefit you are claiming for. You may omit this if an OpenAI API key is configured',
+    'The benefit you are claiming for. Optional if an OpenAI API key or GitHub token is provided, in which case this will be inferred from the receipt or merchant/description.',
   )
   .option(
     '--amount <amount>',
-    'The amount of the claim. You may omit this if using receipt inference with OpenAI.',
+    'The amount of the claim. Optional if an OpenAI API key or GitHub token is provided, in which case this will be inferred from the receipt.',
   )
   .option(
     '--merchant <merchant>',
-    'The name of the merchant. You may omit this if using receipt inference with OpenAI.',
+    'The name of the merchant. Optional if an OpenAI API key or GitHub token is provided, in which case this will be inferred from the receipt.',
   )
   .option(
     '--category <category>',
-    'The category of the claim. You may omit this if an OpenAI API key is configured.',
+    'The category of the claim. Optional if an OpenAI API key or GitHub token is provided, in which case this will be inferred from the receipt or merchant/description.',
   )
   .option(
     '--purchase-date <purchase-date>',
-    'The date of the purchase in YYYY-MM-DD format. You may omit this if using receipt inference with OpenAI.',
+    'The date of purchase in YYYY-MM-DD format. Optional if an OpenAI API key or GitHub token is provided, in which case this will be inferred from the receipt.',
   )
   .option(
     '--description <description>',
-    'The description of the claim. You may omit this if using receipt inference with OpenAI.',
+    'The description of the claim. Optional if an OpenAI API key or GitHub token is provided, in which case this will be inferred from the receipt.',
   )
   .requiredOption(
     '--receipt-path <receipt-path...>',
@@ -61,12 +61,12 @@ command
   .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
   .option(
     '--openai-api-key <openai_token>',
-    'An optional OpenAI API key used to infer claim details from receipt images, or just the benefit and category based on the merchant and description. If this is set, you may omit other claim details when providing a receipt. This can also be configured using the `OPENAI_API_KEY` environment variable.',
+    'An optional OpenAI API key used to infer claim details. If this or a GitHub token is provided, you may omit (a) omit the benefit and category and allow them to be inferred by the LLM or (b) omit everything except the receipt path, and allow all details to be inferred by the LLM. This can also be configured using the `OPENAI_API_KEY` environment variable.',
     process.env.OPENAI_API_KEY,
   )
   .option(
     '--github-token <github-token>',
-    'An optional GitHub Token to use GitHub Models to infer the benefit and category based on the merchant and description. If this is set, you may omit the `--benefit` and `--category` options. This can also be configured using the `GITHUB_TOKEN` environment variable.',
+    'An optional GitHub token used to infer claim details. If this or an OpenAI API key is provided, you may omit (a) omit the benefit and category and allow them to be inferred by the LLM or (b) omit everything except the receipt path, and allow all details to be inferred by the LLM. This can also be configured using the `GITHUB_TOKEN` environment variable.',
     process.env.GITHUB_TOKEN,
   )
   .action(
@@ -161,7 +161,7 @@ command
       } else {
         throw new Error(
           'You must either provide all claim details (--benefit, --category, --amount, --merchant, --purchase-date, --description), ' +
-            'or provide an OpenAI API key or GitHub token with either: (1) just a receipt for full inference, or (2) --merchant and --description for benefit/category inference.',
+            'or provide an OpenAI API key or GitHub token with either: (1) just a receipt for full inference, or (2) all details except --benefit and --category to infer them.',
         );
       }
 
