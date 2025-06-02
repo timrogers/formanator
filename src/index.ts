@@ -8,7 +8,7 @@ import categories from './commands/categories.js';
 import submitClaim from './commands/submit-claim.js';
 import generateTemplateCsv from './commands/generate-template-csv.js';
 import submitClaimsFromCsv from './commands/submit-claims-from-csv.js';
-import submitReceiptsFromDirectory from './commands/submit-receipts-from-directory.js';
+import submitClaimsFromDirectory from './commands/submit-claims-from-directory.js';
 import validateCsv from './commands/validate-csv.js';
 import VERSION from './version.js';
 
@@ -22,7 +22,7 @@ program
   .addCommand(submitClaim)
   .addCommand(generateTemplateCsv)
   .addCommand(submitClaimsFromCsv)
-  .addCommand(submitReceiptsFromDirectory)
+  .addCommand(submitClaimsFromDirectory)
   .addCommand(validateCsv);
 
 program.parse();

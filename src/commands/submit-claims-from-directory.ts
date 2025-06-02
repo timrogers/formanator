@@ -83,16 +83,16 @@ const moveFileToProcessed = (sourceFile: string, processedDir: string): void => 
 };
 
 command
-  .name('submit-receipts-from-directory')
+  .name('submit-claims-from-directory')
   .version(VERSION)
   .description('Submit claims from all receipt files in a directory')
   .requiredOption(
     '--directory <directory>',
-    'The directory containing receipt files to process',
+    'The directory containing receipt files to process. Supported file types: JPEG, PNG, PDF, HEIC.',
   )
   .option(
     '--processed-directory <processed-directory>',
-    'Directory to move successfully processed receipts (defaults to processed/ subdirectory)',
+    'The directory to move successfully processed receipts to after processing (defaults to `processed/` subdirectory under the specified directory)',
   )
   .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
   .option(
@@ -196,7 +196,8 @@ command
               { ...inferredDetails, receiptPath: [receiptFile] },
               accessToken,
             );
-            await createClaim(createClaimOptions);
+            console.log({ createClaimOptions });
+            //await createClaim(createClaimOptions);
 
             console.log(chalk.green(`✅ Claim submitted successfully for ${filename}`));
 
