@@ -43,6 +43,6 @@ export default [
         },
     },
     {
-        ignores: ["dist/*", "script/*", "eslint.config.mjs"],
+        ignores: ["dist/*", "script/*", "eslint.config.mjs", "coverage/**", "jest.config.js"],
     }
 ];

@@ -15,12 +15,12 @@ export interface Claim {
 
 const PURCHASE_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
-const isValidPurchaseDate = (purchaseDate: string): boolean =>
+export const isValidPurchaseDate = (purchaseDate: string): boolean =>
   PURCHASE_DATE_REGEX.test(purchaseDate);
 
 const AMOUNT_REGEX = /^\d+(\.\d{2})?$/;
 
-const isValidAmount = (amount: string): boolean => AMOUNT_REGEX.test(amount);
+export const isValidAmount = (amount: string): boolean => AMOUNT_REGEX.test(amount);
 
 export const claimParamsToCreateClaimOptions = async (
   claim: Claim,
