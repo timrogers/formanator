@@ -21,3 +21,11 @@ export const serializeError = (e: unknown): string => {
 // This function gets passed the HTTP status code, but we're always going to return true,
 // so we don't need to declare the parameter
 export const validateAxiosStatus = (): boolean => true;
+
+export const checkFor403Error = (status: number): void => {
+  if (status === 403) {
+    throw new Error(
+      'Your Forma token has expired. Please log in again with `formanator login`.',
+    );
+  }
+};
