@@ -6,6 +6,7 @@ import { getAccessToken } from '../config.js';
 import { createClaim, getBenefitsWithCategories } from '../forma.js';
 import { claimParamsToCreateClaimOptions } from '../claims.js';
 import VERSION from '../version.js';
+import { prompt } from './../utils.js';
 import {
   attemptToInferCategoryAndBenefit,
   attemptToInferAllFromReceipt,
@@ -124,6 +125,21 @@ command
           openaiApiKey,
           githubToken,
         });
+
+        console.log(
+          chalk.cyan('The LLM inferred the following details from your receipt:'),
+        );
+        console.log(`Amount: ${chalk.magenta(inferredDetails.amount)}`);
+        console.log(`Merchant: ${chalk.magenta(inferredDetails.merchant)}`);
+        console.log(`Purchase Date: ${chalk.magenta(inferredDetails.purchaseDate)}`);
+        console.log(`Description: ${chalk.magenta(inferredDetails.description)}`);
+        console.log(`Benefit: ${chalk.magenta(inferredDetails.benefit)}`);
+        console.log(`Category: ${chalk.magenta(inferredDetails.category)}`);
+        console.log();
+        console.log(
+          `If these details look correct, hit Enter to proceed. If not, press Ctrl + C to end your session.`,
+        );
+        prompt('> ');
 
         const createClaimOptions = await claimParamsToCreateClaimOptions(
           { ...inferredDetails, receiptPath: opts.receiptPath },

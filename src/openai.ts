@@ -236,19 +236,6 @@ export const attemptToInferAllFromReceipt = async (opts: {
     );
   }
 
-  console.log(chalk.cyan('The LLM inferred the following details from your receipt:'));
-  console.log(`Amount: ${chalk.magenta(parsedResponse.amount)}`);
-  console.log(`Merchant: ${chalk.magenta(parsedResponse.merchant)}`);
-  console.log(`Purchase Date: ${chalk.magenta(parsedResponse.purchaseDate)}`);
-  console.log(`Description: ${chalk.magenta(parsedResponse.description)}`);
-  console.log(`Benefit: ${chalk.magenta(parsedResponse.benefit)}`);
-  console.log(`Category: ${chalk.magenta(parsedResponse.category)}`);
-  console.log();
-  console.log(
-    `If these details look correct, hit Enter to proceed. If not, press Ctrl + C to end your session.`,
-  );
-  prompt('> ');
-
   return parsedResponse;
 };
 
