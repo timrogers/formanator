@@ -130,7 +130,13 @@ command
           accessToken,
         );
         await createClaim(createClaimOptions);
-      } else if (merchant && description && openaiApiKey) {
+      } else if (
+        merchant &&
+        description &&
+        amount &&
+        purchaseDate &&
+        hasLlmInferenceKey
+      ) {
         // Legacy mode: infer benefit and category only
         const benefitsWithCategories = await getBenefitsWithCategories(accessToken);
         const { benefit: inferredBenefit, category: inferredCategory } =
@@ -141,12 +147,6 @@ command
             openaiApiKey,
             githubToken,
           });
-
-        if (!amount || !purchaseDate) {
-          throw new Error(
-            'When using OpenAI to infer only benefit and category, you must still provide --amount and --purchase-date.',
-          );
-        }
 
         const createClaimOptions = await claimParamsToCreateClaimOptions(
           {
