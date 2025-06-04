@@ -33,6 +33,20 @@ interface Category {
   benefit_id: string;
 }
 
+interface Claim {
+  id: string;
+  status: string;
+  reimbursement_status: string;
+  payout_status: string;
+  amount: number;
+  category: string;
+  subcategory: string;
+  reimbursement_vendor: string;
+  date_processed: string;
+  note: string;
+  employee_note: string;
+}
+
 interface ProfileResponse {
   data: {
     company: {
@@ -55,6 +69,26 @@ interface ProfileResponse {
         currency: string;
       };
     };
+  };
+}
+
+interface ClaimsListResponse {
+  data: {
+    claims: Array<{
+      id: string;
+      status: string;
+      reimbursement: {
+        status: string;
+        payout_status: string;
+        amount: number;
+        category: string;
+        subcategory: string;
+        reimbursement_vendor: string;
+        date_processed: string;
+        note: string;
+        employee_note: string;
+      };
+    }>;
   };
 }
 
@@ -136,6 +170,50 @@ const getProfile = async (accessToken: string): Promise<ProfileResponse> => {
   }
 
   return response.data as ProfileResponse;
+};
+
+const getClaims = async (
+  accessToken: string,
+  page: number = 0,
+): Promise<ClaimsListResponse> => {
+  const response = await axios.get(
+    `https://api.joinforma.com/client/api/v2/claims?is_mobile=true&page=${page}`,
+    {
+      headers: {
+        'x-auth-token': accessToken,
+      },
+      validateStatus: validateAxiosStatus,
+    },
+  );
+
+  if (response.status !== 200) {
+    checkFor403Error(response.status);
+    throw new Error(
+      `Something went wrong while fetching claims - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`,
+    );
+  }
+
+  return response.data as ClaimsListResponse;
+};
+
+export const getClaimsList = async (
+  accessToken: string,
+  page: number,
+): Promise<Claim[]> => {
+  const claims = await getClaims(accessToken, page);
+  return claims.data.claims.map((claim) => ({
+    id: claim.id,
+    status: claim.status,
+    reimbursement_status: claim.reimbursement.status,
+    payout_status: claim.reimbursement.payout_status,
+    amount: claim.reimbursement.amount,
+    category: claim.reimbursement.category,
+    subcategory: claim.reimbursement.subcategory,
+    reimbursement_vendor: claim.reimbursement.reimbursement_vendor,
+    date_processed: claim.reimbursement.date_processed,
+    note: claim.reimbursement.note,
+    employee_note: claim.reimbursement.employee_note,
+  }));
 };
 
 export const getBenefits = async (accessToken: string): Promise<Benefit[]> => {
