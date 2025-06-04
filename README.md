@@ -43,7 +43,7 @@ When submitting a claim, you need to specify several details like amount, mercha
 
 ### Using GitHub Models to infer claim details
 
-[GitHub Models](https://github.blog/news-insights/product-news/introducing-github-models/) gives a generous free tier for various AI models, so you can do this totally free of charge. 
+[GitHub Models](https://github.blog/news-insights/product-news/introducing-github-models/) gives a generous free tier for various AI models, so you can do this totally free of charge.
 
 You'll just to configure a GitHub personal access token (PAT) with models access:
 
@@ -101,7 +101,7 @@ formanator submit-claim --receipt-path "receipt.jpg"
 
 The LLM will analyze your receipt and extract:
 - Amount
-- Merchant name  
+- Merchant name
 - Purchase date
 - Description of items
 - Appropriate benefit and category
@@ -143,9 +143,21 @@ formanator submit-claim --amount 2.28 \
                         --category "Cables & Cords"
 ```
 
+## Retrieving your claims
+
+You can display a list of all your claims, including their current reimbursement status and claim details.
+
+```bash
+formanator list-claims
+```
+
+Queries are paginated, so you can use the `-p` or `--page` argument to specify paging.
+```bash
+formanator list-claims -p 3
+```
 
 ## Contributing
 
-Changes to this project are verioned using [Semantic Versioning](https://semver.org/) and released to `npm` automatically using [`semantic-release`](https://github.com/semantic-release/semantic-release). 
+Changes to this project are verioned using [Semantic Versioning](https://semver.org/) and released to `npm` automatically using [`semantic-release`](https://github.com/semantic-release/semantic-release).
 
 Commit messages must follow [Angular Commit Message Conventions](https://github.com/angular/angular/blob/master/CONTRIBUTING.md#-commit-message-format) so `semantic-release` knows when to release new versions and what version number to use.

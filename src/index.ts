@@ -5,6 +5,7 @@ import * as commander from 'commander';
 import login from './commands/login.js';
 import benefits from './commands/benefits.js';
 import categories from './commands/categories.js';
+import listClaims from './commands/list-claims.js';
 import submitClaim from './commands/submit-claim.js';
 import generateTemplateCsv from './commands/generate-template-csv.js';
 import submitClaimsFromCsv from './commands/submit-claims-from-csv.js';
@@ -19,6 +20,7 @@ program
   .addCommand(login)
   .addCommand(benefits)
   .addCommand(categories)
+  .addCommand(listClaims)
   .addCommand(submitClaim)
   .addCommand(generateTemplateCsv)
   .addCommand(submitClaimsFromCsv)
