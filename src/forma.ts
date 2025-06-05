@@ -153,7 +153,7 @@ export const getCategoriesForBenefitName = async (
 
 const getProfile = async (accessToken: string): Promise<ProfileResponse> => {
   const response = await axios.get(
-    'https://api.joinforma.com/client/api/v3/settings/profile?is_mobile=true',
+    'https://api.joinforma.com/client/api/v3/settings/profile',
     {
       headers: {
         'x-auth-token': accessToken,
@@ -177,7 +177,7 @@ const getClaims = async (
   page: number = 0,
 ): Promise<ClaimsListResponse> => {
   const response = await axios.get(
-    `https://api.joinforma.com/client/api/v2/claims?is_mobile=true&page=${page}`,
+    `https://api.joinforma.com/client/api/v2/claims?page=${page}`,
     {
       headers: {
         'x-auth-token': accessToken,
@@ -282,7 +282,7 @@ export const createClaim = async (opts: CreateClaimOptions): Promise<void> => {
   };
 
   const response = await axios.post(
-    'https://api.joinforma.com/client/api/v2/claims?is_mobile=true',
+    'https://api.joinforma.com/client/api/v2/claims',
     data,
     {
       headers: {
@@ -320,7 +320,7 @@ interface RequestMagicLinkResponse {
 
 export const requestMagicLink = async (email: string): Promise<void> => {
   const response = await axios.post(
-    'https://api.joinforma.com/client/auth/v2/login/magic?is_mobile=true',
+    'https://api.joinforma.com/client/auth/v2/login/magic',
     { email },
   );
 
@@ -358,7 +358,6 @@ export const exchangeIdAndTkForAccessToken = async (
     id,
     tk,
     return_token: 'true',
-    is_mobile: 'true',
   }).toString();
 
   const response = await axios.get(requestUrl.toString());
