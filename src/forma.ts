@@ -1,7 +1,7 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
+import { z } from 'zod';
 import { createReadStream } from 'fs';
-
-import { validateAxiosStatus, checkFor403Error } from './utils.js';
+import { serializeError } from './utils.js';
 
 interface Benefit {
   id: string;
@@ -105,6 +105,21 @@ export interface CreateClaimOptions {
   subcategoryAlias: string | null;
 }
 
+const ErrorResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.unknown(),
+  errors: z.object({
+    message: z.string(),
+  }),
+  message: z.string(),
+  status: z.number(),
+});
+
+const ERROR_MESSAGE_MAPPINGS = {
+  ['JWT token is invalid']:
+    'Your Forma access token is invalid. Please log in again with `formanator login`.',
+};
+
 export const getCategoriesForBenefitName = async (
   accessToken: string,
   benefitName: string,
@@ -163,10 +178,7 @@ const getProfile = async (accessToken: string): Promise<ProfileResponse> => {
   );
 
   if (response.status !== 200) {
-    checkFor403Error(response.status);
-    throw new Error(
-      `Something went wrong while fetching profile - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`,
-    );
+    handleErrorResponse(response);
   }
 
   return response.data as ProfileResponse;
@@ -187,10 +199,7 @@ const getClaims = async (
   );
 
   if (response.status !== 200) {
-    checkFor403Error(response.status);
-    throw new Error(
-      `Something went wrong while fetching claims - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`,
-    );
+    handleErrorResponse(response);
   }
 
   return response.data as ClaimsListResponse;
@@ -293,10 +302,7 @@ export const createClaim = async (opts: CreateClaimOptions): Promise<void> => {
   );
 
   if (response.status !== 201) {
-    checkFor403Error(response.status);
-    throw new Error(
-      `Something went wrong while submitting claim - expected \`201 Created\` response, got \`${response.status} ${response.statusText}\`.`,
-    );
+    handleErrorResponse(response);
   }
 
   const parsedResponse = response.data as CreateClaimResponse;
@@ -322,13 +328,11 @@ export const requestMagicLink = async (email: string): Promise<void> => {
   const response = await axios.post(
     'https://api.joinforma.com/client/auth/v2/login/magic?is_mobile=true',
     { email },
+    { validateStatus: validateAxiosStatus },
   );
 
   if (response.status !== 200) {
-    checkFor403Error(response.status);
-    throw new Error(
-      `Something went wrong while requesting magic link - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`,
-    );
+    handleErrorResponse(response);
   }
 
   const parsedResponse = response.data as RequestMagicLinkResponse;
@@ -364,10 +368,7 @@ export const exchangeIdAndTkForAccessToken = async (
   const response = await axios.get(requestUrl.toString());
 
   if (response.status !== 200) {
-    checkFor403Error(response.status);
-    throw new Error(
-      `Something went wrong while exchanging magic link for token - expected \`200 OK\` response, got \`${response.status} ${response.statusText}\`.`,
-    );
+    handleErrorResponse(response);
   }
 
   const parsedResponse = response.data as ExchangeIdAndTkForAccessTokenResponse;
@@ -381,4 +382,23 @@ export const exchangeIdAndTkForAccessToken = async (
   }
 
   return parsedResponse.data.auth_token;
+};
+
+// This function gets passed the HTTP status code, but we're always going to return true,
+// so we don't need to declare the parameter
+export const validateAxiosStatus = (): boolean => true;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const handleErrorResponse = (response: AxiosResponse<any, any>): void => {
+  const parsedError = ErrorResponseSchema.safeParse(response.data);
+
+  if (parsedError.success) {
+    const message =
+      ERROR_MESSAGE_MAPPINGS[parsedError.data.message] || parsedError.data.message;
+    throw new Error(message);
+  } else {
+    throw new Error(
+      `Received an unexpected ${response.status} ${response.statusText} response from Forma: ${serializeError(response.data)}`,
+    );
+  }
 };
