@@ -3,6 +3,36 @@ import { z } from 'zod';
 import { createReadStream } from 'fs';
 import { serializeError } from './utils.js';
 
+/**
+ * Forma API base URL
+ */
+const API_BASE_URL = 'https://api.joinforma.com';
+
+/**
+ * Common query parameters used across API calls
+ */
+const COMMON_QUERY_PARAMS = {
+  IS_MOBILE: 'true',
+} as const;
+
+/**
+ * Build a complete API URL from a path and optional query parameters.
+ *
+ * @param path - The API path (e.g., '/client/api/v3/settings/profile')
+ * @param queryParams - Optional query parameters as key-value pairs
+ * @returns Complete URL string
+ */
+const buildApiUrl = (path: string, queryParams?: Record<string, string>): string => {
+  const url = new URL(path, API_BASE_URL);
+
+  if (queryParams) {
+    const searchParams = new URLSearchParams(queryParams);
+    url.search = searchParams.toString();
+  }
+
+  return url.toString();
+};
+
 interface Benefit {
   id: string;
   name: string;
@@ -168,7 +198,9 @@ export const getCategoriesForBenefitName = async (
 
 const getProfile = async (accessToken: string): Promise<ProfileResponse> => {
   const response = await axios.get(
-    'https://api.joinforma.com/client/api/v3/settings/profile?is_mobile=true',
+    buildApiUrl('/client/api/v3/settings/profile', {
+      is_mobile: COMMON_QUERY_PARAMS.IS_MOBILE,
+    }),
     {
       headers: {
         'x-auth-token': accessToken,
@@ -189,7 +221,10 @@ const getClaims = async (
   page: number = 0,
 ): Promise<ClaimsListResponse> => {
   const response = await axios.get(
-    `https://api.joinforma.com/client/api/v2/claims?is_mobile=true&page=${page}`,
+    buildApiUrl('/client/api/v2/claims', {
+      is_mobile: COMMON_QUERY_PARAMS.IS_MOBILE,
+      page: page.toString(),
+    }),
     {
       headers: {
         'x-auth-token': accessToken,
@@ -291,7 +326,7 @@ export const createClaim = async (opts: CreateClaimOptions): Promise<void> => {
   };
 
   const response = await axios.post(
-    'https://api.joinforma.com/client/api/v2/claims?is_mobile=true',
+    buildApiUrl('/client/api/v2/claims', { is_mobile: COMMON_QUERY_PARAMS.IS_MOBILE }),
     data,
     {
       headers: {
@@ -326,7 +361,9 @@ interface RequestMagicLinkResponse {
 
 export const requestMagicLink = async (email: string): Promise<void> => {
   const response = await axios.post(
-    'https://api.joinforma.com/client/auth/v2/login/magic?is_mobile=true',
+    buildApiUrl('/client/auth/v2/login/magic', {
+      is_mobile: COMMON_QUERY_PARAMS.IS_MOBILE,
+    }),
     { email },
     { validateStatus: validateAxiosStatus },
   );
@@ -356,16 +393,14 @@ export const exchangeIdAndTkForAccessToken = async (
   id: string,
   tk: string,
 ): Promise<string> => {
-  const requestUrl = new URL('https://api.joinforma.com/client/auth/v2/login/magic');
-
-  requestUrl.search = new URLSearchParams({
+  const requestUrl = buildApiUrl('/client/auth/v2/login/magic', {
     id,
     tk,
     return_token: 'true',
-    is_mobile: 'true',
-  }).toString();
+    is_mobile: COMMON_QUERY_PARAMS.IS_MOBILE,
+  });
 
-  const response = await axios.get(requestUrl.toString());
+  const response = await axios.get(requestUrl);
 
   if (response.status !== 200) {
     handleErrorResponse(response);
