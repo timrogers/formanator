@@ -2,6 +2,18 @@ import axios from 'axios';
 import { createReadStream } from 'fs';
 
 import { validateAxiosStatus, checkFor403Error } from './utils.js';
+import {
+  ProfileResponseSchema,
+  ClaimsListResponseSchema,
+  CreateClaimResponseSchema,
+  RequestMagicLinkResponseSchema,
+  ExchangeIdAndTkForAccessTokenResponseSchema,
+  type ProfileResponse,
+  type ClaimsListResponse,
+  type CreateClaimResponse,
+  type RequestMagicLinkResponse,
+  type ExchangeIdAndTkForAccessTokenResponse,
+} from './schemas.js';
 
 interface Benefit {
   id: string;
@@ -12,16 +24,6 @@ interface Benefit {
 
 export interface BenefitWithCategories extends Benefit {
   categories: Category[];
-}
-
-interface ProfileResponseCategory {
-  id: string;
-  name: string;
-  subcategories: Array<{
-    name: string;
-    value: string;
-    aliases: string[];
-  }>;
 }
 
 interface Category {
@@ -45,51 +47,6 @@ interface Claim {
   date_processed: string;
   note: string;
   employee_note: string;
-}
-
-interface ProfileResponse {
-  data: {
-    company: {
-      company_wallet_configurations: Array<{
-        id: string;
-        wallet_name: string;
-        categories: ProfileResponseCategory[];
-      }>;
-    };
-    employee: {
-      employee_wallets: Array<{
-        id: string;
-        amount: number;
-        company_wallet_configuration: {
-          wallet_name: string;
-        };
-        is_employee_eligible: boolean;
-      }>;
-      settings: {
-        currency: string;
-      };
-    };
-  };
-}
-
-interface ClaimsListResponse {
-  data: {
-    claims: Array<{
-      id: string;
-      status: string;
-      reimbursement: {
-        status: string;
-        payout_status: string;
-        amount: number;
-        category: string;
-        subcategory: string;
-        reimbursement_vendor: string;
-        date_processed: string;
-        note: string;
-        employee_note: string;
-      };
-    }>;
-  };
 }
 
 export interface CreateClaimOptions {
@@ -169,7 +126,13 @@ const getProfile = async (accessToken: string): Promise<ProfileResponse> => {
     );
   }
 
-  return response.data as ProfileResponse;
+  try {
+    return ProfileResponseSchema.parse(response.data);
+  } catch (error) {
+    throw new Error(
+      `Invalid profile response format: ${error instanceof Error ? error.message : 'Unknown validation error'}`,
+    );
+  }
 };
 
 const getClaims = async (
@@ -193,7 +156,13 @@ const getClaims = async (
     );
   }
 
-  return response.data as ClaimsListResponse;
+  try {
+    return ClaimsListResponseSchema.parse(response.data);
+  } catch (error) {
+    throw new Error(
+      `Invalid claims response format: ${error instanceof Error ? error.message : 'Unknown validation error'}`,
+    );
+  }
 };
 
 export const getClaimsList = async (
@@ -248,10 +217,6 @@ export const getBenefitsWithCategories = async (
   );
 };
 
-interface CreateClaimResponse {
-  success: boolean;
-}
-
 export const createClaim = async (opts: CreateClaimOptions): Promise<void> => {
   const {
     accessToken,
@@ -299,7 +264,14 @@ export const createClaim = async (opts: CreateClaimOptions): Promise<void> => {
     );
   }
 
-  const parsedResponse = response.data as CreateClaimResponse;
+  let parsedResponse: CreateClaimResponse;
+  try {
+    parsedResponse = CreateClaimResponseSchema.parse(response.data);
+  } catch (error) {
+    throw new Error(
+      `Invalid create claim response format: ${error instanceof Error ? error.message : 'Unknown validation error'}`,
+    );
+  }
 
   if (!parsedResponse.success) {
     throw new Error(
@@ -309,14 +281,6 @@ export const createClaim = async (opts: CreateClaimOptions): Promise<void> => {
     );
   }
 };
-
-interface RequestMagicLinkResponse {
-  success: boolean;
-  status: number;
-  data: {
-    done: boolean;
-  };
-}
 
 export const requestMagicLink = async (email: string): Promise<void> => {
   const response = await axios.post(
@@ -331,7 +295,14 @@ export const requestMagicLink = async (email: string): Promise<void> => {
     );
   }
 
-  const parsedResponse = response.data as RequestMagicLinkResponse;
+  let parsedResponse: RequestMagicLinkResponse;
+  try {
+    parsedResponse = RequestMagicLinkResponseSchema.parse(response.data);
+  } catch (error) {
+    throw new Error(
+      `Invalid magic link response format: ${error instanceof Error ? error.message : 'Unknown validation error'}`,
+    );
+  }
 
   if (!parsedResponse.success) {
     throw new Error(
@@ -341,12 +312,6 @@ export const requestMagicLink = async (email: string): Promise<void> => {
     );
   }
 };
-
-interface ExchangeIdAndTkForAccessTokenResponse {
-  success: boolean;
-  status: number;
-  data: { auth_token: string };
-}
 
 export const exchangeIdAndTkForAccessToken = async (
   id: string,
@@ -369,7 +334,14 @@ export const exchangeIdAndTkForAccessToken = async (
     );
   }
 
-  const parsedResponse = response.data as ExchangeIdAndTkForAccessTokenResponse;
+  let parsedResponse: ExchangeIdAndTkForAccessTokenResponse;
+  try {
+    parsedResponse = ExchangeIdAndTkForAccessTokenResponseSchema.parse(response.data);
+  } catch (error) {
+    throw new Error(
+      `Invalid token exchange response format: ${error instanceof Error ? error.message : 'Unknown validation error'}`,
+    );
+  }
 
   if (!parsedResponse.success) {
     throw new Error(
