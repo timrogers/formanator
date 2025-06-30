@@ -11,7 +11,13 @@ With the power of large language models 🧠👀 - free of charge thanks to [Git
 
 # Installation
 
-To install Formanator, make sure you have [Node.js](https://nodejs.org/en) installed, and then just run:
+To use Formanator, make sure you have [Node.js](https://nodejs.org/en) installed. You can then run it directly with `npx` without installing it globally:
+
+```bash
+npx formanator
+```
+
+Alternatively, if you prefer to install it globally, you can run:
 
 ```bash
 npm install -g formanator
@@ -29,7 +35,7 @@ brew install ghostscript graphicsmagick
 
 To get started, you'll need to connect Formanator to your Forma account. Here's how the process works:
 
-1. Run `formanator login`.
+1. Run `npx formanator login`.
 2. Provide your email in one of the three ways:
     1. At the prompt, enter your email address, then hit Enter.
     2. Set the `FORMA_EMAIL` environment variable
@@ -73,7 +79,7 @@ You can submit all receipts in a specific directory, using a large language mode
 
 ```bash
 # You'll need to set GITHUB_TOKEN or OPENAI_API_KEY, or specify --github-token or --openai-api-key
-formanator submit-claims-from-directory --directory input/
+npx formanator submit-claims-from-directory --directory input/
 ```
 
 All JPG, PNG, PDF and HEIC receipts in the directory will be processed. The tool will allow you to confirm the details for each receipt before submitting.
@@ -83,11 +89,11 @@ All JPG, PNG, PDF and HEIC receipts in the directory will be processed. The tool
 You can submit multiple claims at once by generating a template CSV, filling it in, then submitting the whole CSV. Optionally, the tool can infer the benefit and category for each claim.
 
 1. Make sure you're logged in - for more details, see "Connecting to your Forma account" above.
-2. Run `formanator generate-template-csv` to generate a CSV template. By default, the template will be saved as `claims.csv`. Optionally, you can specify the `--output-path` argument to choose where to save the template.
-3. If you aren't using OpenAI to infer the benefit and category for each claim, you'll need to figure this out yourself. Get a list of your available benefits by running `formanator benefits`. Pick the relevant benefit, and then run `formanator categories --benefit <benefit>` to get a list of categories.
+2. Run `npx formanator generate-template-csv` to generate a CSV template. By default, the template will be saved as `claims.csv`. Optionally, you can specify the `--output-path` argument to choose where to save the template.
+3. If you aren't using OpenAI to infer the benefit and category for each claim, you'll need to figure this out yourself. Get a list of your available benefits by running `npx formanator benefits`. Pick the relevant benefit, and then run `npx formanator categories --benefit <benefit>` to get a list of categories.
 4. Update the template, filling in the columns for each of your claims. If you've configured OpenAI or GitHub Models, you can leave the `benefit` and `category` blank. If you want to attach multiple receipts, you can add comma-separated paths to the `receipt_path` column.
-5. Validate the CSV up-front by running `formanator validate-csv --input-path claims.csv`.
-6. Submit your claims by running `formanator submit-claims-from-csv --input-path claims.csv`.
+5. Validate the CSV up-front by running `npx formanator validate-csv --input-path claims.csv`.
+6. Submit your claims by running `npx formanator submit-claims-from-csv --input-path claims.csv`.
 7. If you've configured OpenAI, you'll be given the chance to check the benefit and category it has inferred for each claim.
 8. Your claims will be submitted. If there are any validation errors with any of the rows, or if anything goes wrong during submission, an error message will be displayed, but the tool will continue submitting other claims.
 
@@ -101,7 +107,7 @@ If you have configured GitHub Models or OpenAI, you can simply provide a receipt
 
 ```bash
 # You'll need to set GITHUB_TOKEN or OPENAI_API_KEY, or specify --github-token or --openai-api-key
-formanator submit-claim --receipt-path "receipt.jpg"
+npx formanator submit-claim --receipt-path "receipt.jpg"
 ```
 
 The LLM will analyze your receipt and extract:
@@ -121,7 +127,7 @@ If you want to provide some details manually, but let the model infer the benefi
 
 ```bash
 # You'll need to set GITHUB_TOKEN or OPENAI_API_KEY, or specify --github-token or --openai-api-key
-formanator submit-claim --amount 2.28 \
+npx formanator submit-claim --amount 2.28 \
                         --merchant Amazon \
                         --description "USB cable" \
                         --purchase-date 2023-01-15 \
@@ -134,12 +140,12 @@ You'll be given the chance to review the inferred details. If you confirm by hit
 
 You can provide all claim details manually, with no LLM inference.
 
-1. Figure out the benefit and category for your claim. Get a list of your available benefits by running `formanator benefits`. Pick the relevant benefit, and then run `formanator categories --benefit <benefit>` to get a list of categories.
+1. Figure out the benefit and category for your claim. Get a list of your available benefits by running `npx formanator benefits`. Pick the relevant benefit, and then run `npx formanator categories --benefit <benefit>` to get a list of categories.
 
-2. Submit your claim by running `formanator submit-claim` with all required details:
+2. Submit your claim by running `npx formanator submit-claim` with all required details:
 
 ```bash
-formanator submit-claim --amount 2.28 \
+npx formanator submit-claim --amount 2.28 \
                         --merchant Amazon \
                         --description "USB cable" \
                         --purchase-date 2023-01-15 \
@@ -153,12 +159,12 @@ formanator submit-claim --amount 2.28 \
 You can display a list of all your claims, including their current reimbursement status and claim details.
 
 ```bash
-formanator list-claims
+npx formanator list-claims
 ```
 
 Queries are paginated, so you can use the `-p` or `--page` argument to specify paging.
 ```bash
-formanator list-claims -p 3
+npx formanator list-claims -p 3
 ```
 
 ## Model Context Protocol (MCP) usage
@@ -197,7 +203,7 @@ The MCP server provides three tools:
 - **`listClaims`** - Lists claims with pagination support (accepts optional `page` parameter)
 - **`createClaim`** - Creates new claims (requires `amount`, `merchant`, `purchaseDate`, `description`, `receiptPath`, `benefit`, and `category` parameters)
 
-You must be logged in with `formanator login` before starting the MCP server. The server uses stdio transport for communication with MCP clients.
+You must be logged in with `npx formanator login` before starting the MCP server. The server uses stdio transport for communication with MCP clients.
 
 ## Contributing
 

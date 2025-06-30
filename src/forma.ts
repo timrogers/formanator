@@ -117,7 +117,7 @@ const ErrorResponseSchema = z.object({
 
 const ERROR_MESSAGE_MAPPINGS = {
   ['JWT token is invalid']:
-    'Your Forma access token is invalid. Please log in again with `formanator login`.',
+    'Your Forma access token is invalid. Please log in again with `npx formanator login`.',
 };
 
 export const getCategoriesForBenefitName = async (
