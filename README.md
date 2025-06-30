@@ -1,6 +1,9 @@
 # Formanator 🤖
 
-Formanator allows you to **submit benefit claims to [Forma](https://www.joinforma.com/) from the command line**, either one-by-one or in bulk.
+Formanator allows you to:
+
+* **Submit benefit claims to [Forma](https://www.joinforma.com/) from the command line**, either one-by-one or in bulk
+* **Understand your Forma benefits and track and submit claims from any Model Context Protocol (MCP) client**, for example [Claude Desktop](https://claude.ai/download) or [Visual Studio Code](https://code.visualstudio.com/)
 
 With the power of large language models 🧠👀 - free of charge thanks to [GitHub Models](https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models) - it can even **analyse your receipts and generate your claims automatically**.
 
@@ -37,11 +40,13 @@ To get started, you'll need to connect Formanator to your Forma account. Here's 
 
 To remember your login, Formanator stores a `.formanatorrc.json` file in your home directory with your access token.
 
-## Configuring GitHub Models or OpenAI for inferring claim details
+## Command line usage
+
+### Configuring GitHub Models or OpenAI for inferring claim details
 
 When submitting a claim, you need to specify several details like amount, merchant, purchase date, description, benefit and category. You can either input these manually, or use a large language model (LLM) to infer them.
 
-### Using GitHub Models to infer claim details
+#### Using GitHub Models to infer claim details
 
 [GitHub Models](https://github.blog/news-insights/product-news/introducing-github-models/) gives a generous free tier for various AI models, so you can do this totally free of charge.
 
@@ -50,7 +55,7 @@ You'll just to configure a GitHub personal access token (PAT) with models access
 1. Create a [GitHub Token](https://github.com/settings/personal-access-tokens) with read access to GitHub Models.
 2. Set the Token as the `GITHUB_TOKEN` environment variable, or be prepared to pass the `--github-token` argument to every command.
 
-### Using OpenAI to infer claim detils
+#### Using OpenAI to infer claim detils
 
 You can also use OpenAI's API to infer claim details. The cost is minimal, at $0.01-0.02 per receipt for full inference, or $0.001 for benefit/category only.
 
@@ -60,9 +65,9 @@ You'll need to configure an OpenAI API key:
 2. Create an [OpenAI API key](https://platform.openai.com/account/api-keys).
 3. Set the API key as the `OPENAI_API_KEY` environment variable, or be prepared to pass the `--openai-api-key` argument to every command.
 
-## Submitting claims in bulk (recommended)
+### Submitting claims in bulk (recommended)
 
-### Automatically submitting all receipts in a directory (recommended)
+#### Automatically submitting all receipts in a directory (recommended)
 
 You can submit all receipts in a specific directory, using a large language model (LLM) to infer the claim details for each receipt.
 
@@ -73,7 +78,7 @@ formanator submit-claims-from-directory --directory input/
 
 All JPG, PNG, PDF and HEIC receipts in the directory will be processed. The tool will allow you to confirm the details for each receipt before submitting.
 
-### Manually submitting receipts using a CSV template
+#### Manually submitting receipts using a CSV template
 
 You can submit multiple claims at once by generating a template CSV, filling it in, then submitting the whole CSV. Optionally, the tool can infer the benefit and category for each claim.
 
@@ -86,11 +91,11 @@ You can submit multiple claims at once by generating a template CSV, filling it 
 7. If you've configured OpenAI, you'll be given the chance to check the benefit and category it has inferred for each claim.
 8. Your claims will be submitted. If there are any validation errors with any of the rows, or if anything goes wrong during submission, an error message will be displayed, but the tool will continue submitting other claims.
 
-## Submitting a single claim
+### Submitting a single claim
 
 You have several options for submitting a claim:
 
-### Option 1: Infer all claim details from receipt (recommended)
+#### Option 1: Infer all claim details from receipt (recommended)
 
 If you have configured GitHub Models or OpenAI, you can simply provide a receipt image and let the model extract ALL the details.
 
@@ -110,7 +115,7 @@ You'll be shown the extracted details and asked to confirm before submitting.
 
 **Supported receipt formats**: JPEG, PNG, PDF, and HEIC files (PDF requires GraphicsMagick and Ghostscript)
 
-### Option 2: Infer beenfit and category from claim details
+#### Option 2: Infer beenfit and category from claim details
 
 If you want to provide some details manually, but let the model infer the benefit and category:
 
@@ -125,7 +130,7 @@ formanator submit-claim --amount 2.28 \
 
 You'll be given the chance to review the inferred details. If you confirm by hitting Enter, your claim will be submitted.
 
-### Option 2: Manual entry
+#### Option 2: Manual entry
 
 You can provide all claim details manually, with no LLM inference.
 
@@ -143,7 +148,7 @@ formanator submit-claim --amount 2.28 \
                         --category "Cables & Cords"
 ```
 
-## Retrieving your claims
+### Retrieving your claims
 
 You can display a list of all your claims, including their current reimbursement status and claim details.
 
@@ -156,15 +161,35 @@ Queries are paginated, so you can use the `-p` or `--page` argument to specify p
 formanator list-claims -p 3
 ```
 
-## MCP Server
+## Model Context Protocol (MCP) usage
 
 Formanator can be run as an [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server, allowing AI assistants and other MCP clients to interact with your Forma account programmatically.
 
-To start the MCP server:
+You can:
 
-```bash
-formanator mcp
+1. Make sure `npm`'s `npx` is available on your computer, and get the path by running `which npx` in a terminal
+1. From the Claude app, open the "Developer" menu, then click "Open App Config File...".
+1. Add the MCP server to the `mcpServers` key in your config:
+
+```json
+{
+  "mcpServers": {
+    "formanator": {
+      "command": "/path/to/npx",
+      "args": [
+        "formanator",
+        "-y",
+        "mcp"
+      ]
+    }
+  }
+}
 ```
+
+1. Back in the Claude app, open the "Developer" menu, then click "Reload MCP Configuration".
+1. To check that the MCP server is running, start a chat, then click the "Search and tools" button under the chat input, and check for a "litra" item in the menu.
+
+### Tools
 
 The MCP server provides three tools:
 
