@@ -21,7 +21,7 @@ interface Arguments {
 }
 
 // MCP Server implementation
-const createMcpServer = (accessToken: string) => {
+const createMcpServer = () => {
   const server = new Server(
     {
       name: 'formanator',
@@ -117,6 +117,15 @@ const createMcpServer = (accessToken: string) => {
   // Handle tool calls
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+
+    // Fetch access token for each tool invocation
+    const accessToken = getAccessToken();
+    if (!accessToken) {
+      throw new McpError(
+        ErrorCode.InternalError,
+        "You aren't logged in to Forma. Please run `formanator login` first.",
+      );
+    }
 
     try {
       switch (name) {
@@ -220,7 +229,7 @@ command
         );
       }
 
-      const server = createMcpServer(accessToken);
+      const server = createMcpServer();
       const transport = new StdioServerTransport();
 
       await server.connect(transport);
