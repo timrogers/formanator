@@ -35,7 +35,7 @@ To get started, you'll need to connect Formanator to your Forma account. Here's 
 4. At the prompt, paste your magic link, then hit Enter.
 5. You'll be logged in 🥳
 
-To remember your login, Formanator stores a `.formanator.json` file in your home directory with your access token.
+To remember your login, Formanator stores a `.formanatorrc.json` file in your home directory with your access token.
 
 ## Configuring GitHub Models or OpenAI for inferring claim details
 
@@ -155,6 +155,24 @@ Queries are paginated, so you can use the `-p` or `--page` argument to specify p
 ```bash
 formanator list-claims -p 3
 ```
+
+## MCP Server
+
+Formanator can be run as an [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server, allowing AI assistants and other MCP clients to interact with your Forma account programmatically.
+
+To start the MCP server:
+
+```bash
+formanator mcp
+```
+
+The MCP server provides three tools:
+
+- **`listBenefitsWithCategories`** - Lists all available benefits with their categories and remaining balances
+- **`listClaims`** - Lists claims with pagination support (accepts optional `page` parameter)
+- **`createClaim`** - Creates new claims (requires `amount`, `merchant`, `purchaseDate`, `description`, `receiptPath`, `benefit`, and `category` parameters)
+
+You must be logged in with `formanator login` before starting the MCP server. The server uses stdio transport for communication with MCP clients.
 
 ## Contributing
 
