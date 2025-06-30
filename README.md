@@ -178,7 +178,6 @@ You can:
       "command": "/path/to/npx",
       "args": [
         "formanator",
-        "-y",
         "mcp"
       ]
     }
