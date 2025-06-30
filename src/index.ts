@@ -11,6 +11,7 @@ import generateTemplateCsv from './commands/generate-template-csv.js';
 import submitClaimsFromCsv from './commands/submit-claims-from-csv.js';
 import submitClaimsFromDirectory from './commands/submit-claims-from-directory.js';
 import validateCsv from './commands/validate-csv.js';
+import mcp from './commands/mcp.js';
 import VERSION from './version.js';
 
 const program = new commander.Command();
@@ -25,6 +26,7 @@ program
   .addCommand(generateTemplateCsv)
   .addCommand(submitClaimsFromCsv)
   .addCommand(submitClaimsFromDirectory)
-  .addCommand(validateCsv);
+  .addCommand(validateCsv)
+  .addCommand(mcp);
 
 program.parse();
