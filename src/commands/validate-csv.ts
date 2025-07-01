@@ -19,7 +19,7 @@ command
   .name('validate-csv')
   .version(VERSION)
   .description(
-    'Validate a completed CSV before submitting it with `submit-claims-from-csv`',
+    'Validate a completed CSV before submitting it with `npx formanator submit-claims-from-csv`',
   )
   .requiredOption('--input-path <input_path>', 'The path to the CSV to read claims from')
   .action(
@@ -28,7 +28,7 @@ command
 
       if (!accessToken) {
         throw new Error(
-          "You aren't logged in to Forma. Please run `formanator login` first.",
+          "You aren't logged in to Forma. Please run `npx formanator login` first.",
         );
       }
 

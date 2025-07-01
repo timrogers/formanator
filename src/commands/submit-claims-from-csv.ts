@@ -81,7 +81,7 @@ command
 
       if (!accessToken) {
         throw new Error(
-          "You aren't logged in to Forma. Please run `formanator login` first.",
+          "You aren't logged in to Forma. Please run `npx formanator login` first.",
         );
       }
 
