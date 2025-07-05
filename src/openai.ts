@@ -174,7 +174,11 @@ export const attemptToInferAllFromReceipt = async (opts: {
   // Parse the JSON response
   let parsedResponse: ReceiptInferenceResult;
   try {
-    parsedResponse = JSON.parse(returnedResponseAsString);
+    const cleanedResponse = returnedResponseAsString
+      .replace(/^```json\s*/, '')
+      .replace(/\s*```$/, '')
+      .trim();
+    parsedResponse = JSON.parse(cleanedResponse);
   } catch (error) {
     throw new Error(
       `Something went wrong while parsing OpenAI's response: ${returnedResponseAsString}. Error: ${error}`,
