@@ -289,7 +289,7 @@ ${validBenefitsAsList}
 Valid categories:
 ${validCategoriesAsList}
 
-Return ONLY a valid JSON object with these exact field names. Do not include any other text or formatting.`;
+Return ONLY a valid JSON object with these exact field names. Do not include any other text or formatting. Do not wrap the JSON object in a markdown code block syntax.`;
 };
 
 const convertToImageIfNeeded = async (filePath: string): Promise<string> => {
