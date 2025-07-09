@@ -243,7 +243,7 @@ export const attemptToInferAllFromReceipt = async (opts: {
   return parsedResponse;
 };
 
-const generateOpenaiPrompt = (opts: {
+export const generateOpenaiPrompt = (opts: {
   validCategories: string[];
   merchant: string;
   description: string;
