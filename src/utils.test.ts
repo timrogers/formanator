@@ -44,7 +44,7 @@ describe('utils', () => {
 
   describe('actionRunner', () => {
     it('should call the function and return its result when successful', async () => {
-      const mockFn = jest.fn<(...args: any[]) => Promise<void>>().mockResolvedValue();
+      const mockFn = jest.fn<(...args: string[]) => Promise<void>>().mockResolvedValue();
       const wrappedFn = actionRunner(mockFn);
 
       await wrappedFn('arg1', 'arg2');
@@ -55,17 +55,23 @@ describe('utils', () => {
 
     it('should catch errors and call error handler when function throws', async () => {
       const testError = new Error('Test error');
-      const mockFn = jest.fn<(...args: any[]) => Promise<void>>().mockRejectedValue(testError);
+      const mockFn = jest
+        .fn<(...args: string[]) => Promise<void>>()
+        .mockRejectedValue(testError);
       const wrappedFn = actionRunner(mockFn);
 
       // Mock process.exit to prevent test from actually exiting
-      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+      const mockExit = jest
+        .spyOn(process, 'exit')
+        .mockImplementation(() => undefined as never);
       const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       await wrappedFn('arg1', 'arg2');
 
       expect(mockFn).toHaveBeenCalledWith('arg1', 'arg2');
-      expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('Test error'));
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        expect.stringContaining('Test error'),
+      );
       expect(mockExit).toHaveBeenCalledWith(1);
 
       mockExit.mockRestore();
@@ -73,10 +79,12 @@ describe('utils', () => {
     });
 
     it('should handle non-Error thrown values', async () => {
-      const mockFn = jest.fn<(...args: any[]) => Promise<void>>().mockRejectedValue('String error');
+      const mockFn = jest.fn<() => Promise<void>>().mockRejectedValue('String error');
       const wrappedFn = actionRunner(mockFn);
 
-      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+      const mockExit = jest
+        .spyOn(process, 'exit')
+        .mockImplementation(() => undefined as never);
       const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       await wrappedFn();

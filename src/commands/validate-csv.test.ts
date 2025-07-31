@@ -16,9 +16,16 @@ import { readClaimsFromCsv, claimParamsToCreateClaimOptions } from '../claims.js
 
 const mockFs = fs as jest.Mocked<typeof fs>;
 const mockGetAccessToken = getAccessToken as jest.MockedFunction<typeof getAccessToken>;
-const mockGetBenefitsWithCategories = getBenefitsWithCategories as jest.MockedFunction<typeof getBenefitsWithCategories>;
-const mockReadClaimsFromCsv = readClaimsFromCsv as jest.MockedFunction<typeof readClaimsFromCsv>;
-const mockClaimParamsToCreateClaimOptions = claimParamsToCreateClaimOptions as jest.MockedFunction<typeof claimParamsToCreateClaimOptions>;
+const mockGetBenefitsWithCategories = getBenefitsWithCategories as jest.MockedFunction<
+  typeof getBenefitsWithCategories
+>;
+const mockReadClaimsFromCsv = readClaimsFromCsv as jest.MockedFunction<
+  typeof readClaimsFromCsv
+>;
+const mockClaimParamsToCreateClaimOptions =
+  claimParamsToCreateClaimOptions as jest.MockedFunction<
+    typeof claimParamsToCreateClaimOptions
+  >;
 
 // Test the validate-csv command logic
 describe('validate-csv command', () => {
@@ -36,7 +43,7 @@ describe('validate-csv command', () => {
         merchant: 'Test Gym',
         purchaseDate: '2024-01-15',
         description: 'Gym membership',
-        receiptPath: ['/path/to/receipt.pdf']
+        receiptPath: ['/path/to/receipt.pdf'],
       },
       {
         category: '', // Empty category - should trigger inference warning
@@ -45,8 +52,8 @@ describe('validate-csv command', () => {
         merchant: 'Test Store',
         purchaseDate: '2024-01-16',
         description: 'Office supplies',
-        receiptPath: ['/path/to/receipt2.pdf']
-      }
+        receiptPath: ['/path/to/receipt2.pdf'],
+      },
     ];
 
     const mockBenefitsWithCategories = [
@@ -62,10 +69,10 @@ describe('validate-csv command', () => {
             subcategory_name: 'Gym',
             subcategory_value: 'gym',
             subcategory_alias: 'wellness',
-            benefit_id: 'benefit-1'
-          }
-        ]
-      }
+            benefit_id: 'benefit-1',
+          },
+        ],
+      },
     ];
 
     it('should validate CSV file existence', async () => {
@@ -92,25 +99,28 @@ describe('validate-csv command', () => {
         benefitId: 'benefit-1',
         categoryId: 'cat-1',
         subcategoryAlias: 'wellness',
-        subcategoryValue: 'gym'
+        subcategoryValue: 'gym',
       });
 
       const result = await claimParamsToCreateClaimOptions(completeClaim, 'test-token');
-      
+
       expect(result.benefitId).toBe('benefit-1');
       expect(result.categoryId).toBe('cat-1');
-      expect(mockClaimParamsToCreateClaimOptions).toHaveBeenCalledWith(completeClaim, 'test-token');
+      expect(mockClaimParamsToCreateClaimOptions).toHaveBeenCalledWith(
+        completeClaim,
+        'test-token',
+      );
     });
 
     it('should handle claims with missing benefit/category for inference', async () => {
       const incompleteClaim = mockClaims[1];
       mockGetBenefitsWithCategories.mockResolvedValue(mockBenefitsWithCategories);
-      
+
       // For incomplete claims, the command should use first benefit/category for validation
       const claimWithDefaults = {
         ...incompleteClaim,
         benefit: mockBenefitsWithCategories[0].name,
-        category: mockBenefitsWithCategories[0].categories[0].subcategory_name
+        category: mockBenefitsWithCategories[0].categories[0].subcategory_name,
       };
 
       mockClaimParamsToCreateClaimOptions.mockResolvedValue({
@@ -119,44 +129,48 @@ describe('validate-csv command', () => {
         benefitId: 'benefit-1',
         categoryId: 'cat-1',
         subcategoryAlias: null,
-        subcategoryValue: 'gym'
+        subcategoryValue: 'gym',
       });
 
-      const result = await claimParamsToCreateClaimOptions(claimWithDefaults, 'test-token');
+      const result = await claimParamsToCreateClaimOptions(
+        claimWithDefaults,
+        'test-token',
+      );
       expect(result.benefitId).toBe('benefit-1');
     });
 
     it('should handle validation errors gracefully', async () => {
       const invalidClaim = {
         ...mockClaims[0],
-        amount: 'invalid-amount'
+        amount: 'invalid-amount',
       };
 
       mockClaimParamsToCreateClaimOptions.mockRejectedValue(
-        new Error('Amount must be in the format 0.00.')
+        new Error('Amount must be in the format 0.00.'),
       );
 
-      await expect(claimParamsToCreateClaimOptions(invalidClaim, 'test-token'))
-        .rejects.toThrow('Amount must be in the format 0.00.');
+      await expect(
+        claimParamsToCreateClaimOptions(invalidClaim, 'test-token'),
+      ).rejects.toThrow('Amount must be in the format 0.00.');
     });
 
     it('should handle access token retrieval', () => {
       mockGetAccessToken.mockReturnValue('stored-token');
-      
+
       const token = getAccessToken();
       expect(token).toBe('stored-token');
     });
 
     it('should handle missing access token', () => {
       mockGetAccessToken.mockReturnValue(null);
-      
+
       const token = getAccessToken();
       expect(token).toBeNull();
     });
 
     it('should get benefits with categories for validation', async () => {
       mockGetBenefitsWithCategories.mockResolvedValue(mockBenefitsWithCategories);
-      
+
       const benefits = await getBenefitsWithCategories('test-token');
       expect(benefits).toEqual(mockBenefitsWithCategories);
       expect(mockGetBenefitsWithCategories).toHaveBeenCalledWith('test-token');

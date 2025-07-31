@@ -5,22 +5,20 @@ export default {
   transform: {
     '^.+\\.ts$': ['ts-jest', { useESM: true }],
   },
-  transformIgnorePatterns: [
-    'node_modules/(?!(chalk|#ansi-styles|prompt-sync)/)',
-  ],
+  transformIgnorePatterns: ['node_modules/(?!(chalk|#ansi-styles|prompt-sync)/)'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   testEnvironment: 'node',
   testMatch: [
-    '**/__tests__/**/*.(test|spec).(ts|js)',
-    '**/*.(test|spec).(ts|js)'
+    '**/src/**/__tests__/**/*.(test|spec).(ts|js)',
+    '**/src/**/*.(test|spec).(ts|js)',
   ],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
     '!src/index.ts',
-    '!src/version.ts'
+    '!src/version.ts',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
