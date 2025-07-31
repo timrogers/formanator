@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 jest.mock('axios');
 jest.mock('fs');
 jest.mock('../src/utils.js', () => ({
-  serializeError: jest.fn((e) => typeof e === 'string' ? e : (e instanceof Error ? e.message : JSON.stringify(e)))
+  serializeError: jest.fn((e) =>
+    typeof e === 'string' ? e : e instanceof Error ? e.message : JSON.stringify(e),
+  ),
 }));
 
 import axios from 'axios';
@@ -19,11 +21,20 @@ import {
   exchangeIdAndTkForAccessToken,
   handleErrorResponse,
   validateAxiosStatus,
-  type CreateClaimOptions
+  type CreateClaimOptions,
 } from '../src/forma.js';
 
 const mockAxios = axios as jest.Mocked<typeof axios>;
 const mockFs = fs as jest.Mocked<typeof fs>;
+
+// Define a type for mock error responses - removing unused interface
+// interface MockErrorResponse {
+//   status: number;
+//   statusText: string;
+//   data: unknown;
+//   headers: Record<string, string>;
+//   config: Record<string, unknown>;
+// }
 
 describe('forma', () => {
   beforeEach(() => {
@@ -41,17 +52,20 @@ describe('forma', () => {
       const response = {
         status: 401,
         statusText: 'Unauthorized',
+        headers: {},
+        config: {},
         data: {
           success: false,
           data: null,
           errors: { message: 'JWT token is invalid' },
           message: 'JWT token is invalid',
-          status: 401
-        }
+          status: 401,
+        },
       };
 
-      expect(() => handleErrorResponse(response as any)).toThrow(
-        'Your Forma access token is invalid. Please log in again with `npx formanator login`.'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect(() => handleErrorResponse(response as unknown as any)).toThrow(
+        'Your Forma access token is invalid. Please log in again with `npx formanator login`.',
       );
     });
 
@@ -59,27 +73,35 @@ describe('forma', () => {
       const response = {
         status: 400,
         statusText: 'Bad Request',
+        headers: {},
+        config: {},
         data: {
           success: false,
           data: null,
           errors: { message: 'Invalid request' },
           message: 'Invalid request',
-          status: 400
-        }
+          status: 400,
+        },
       };
 
-      expect(() => handleErrorResponse(response as any)).toThrow('Invalid request');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect(() => handleErrorResponse(response as unknown as any)).toThrow(
+        'Invalid request',
+      );
     });
 
     it('should throw generic error for unparseable responses', () => {
       const response = {
         status: 500,
         statusText: 'Internal Server Error',
-        data: 'Some unexpected response format'
+        headers: {},
+        config: {},
+        data: 'Some unexpected response format',
       };
 
-      expect(() => handleErrorResponse(response as any)).toThrow(
-        'Received an unexpected 500 Internal Server Error response from Forma: Some unexpected response format'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect(() => handleErrorResponse(response as unknown as any)).toThrow(
+        'Received an unexpected 500 Internal Server Error response from Forma: Some unexpected response format',
       );
     });
   });
@@ -95,25 +117,25 @@ describe('forma', () => {
                 id: 'wallet-1',
                 amount: 500,
                 company_wallet_configuration: { wallet_name: 'Health & Wellness' },
-                is_employee_eligible: true
+                is_employee_eligible: true,
               },
               {
                 id: 'wallet-2',
                 amount: 1000,
                 company_wallet_configuration: { wallet_name: 'Learning & Development' },
-                is_employee_eligible: true
+                is_employee_eligible: true,
               },
               {
                 id: 'wallet-3',
                 amount: 200,
                 company_wallet_configuration: { wallet_name: 'Ineligible Benefit' },
-                is_employee_eligible: false
-              }
+                is_employee_eligible: false,
+              },
             ],
-            settings: { currency: 'USD' }
-          }
-        }
-      }
+            settings: { currency: 'USD' },
+          },
+        },
+      },
     };
 
     it('should return only eligible benefits', async () => {
@@ -126,22 +148,22 @@ describe('forma', () => {
           id: 'wallet-1',
           name: 'Health & Wellness',
           remainingAmount: 500,
-          remainingAmountCurrency: 'USD'
+          remainingAmountCurrency: 'USD',
         },
         {
           id: 'wallet-2',
           name: 'Learning & Development',
           remainingAmount: 1000,
-          remainingAmountCurrency: 'USD'
-        }
+          remainingAmountCurrency: 'USD',
+        },
       ]);
 
       expect(mockAxios.get).toHaveBeenCalledWith(
         'https://api.joinforma.com/client/api/v3/settings/profile',
         {
           headers: { 'x-auth-token': 'test-token' },
-          validateStatus: validateAxiosStatus
-        }
+          validateStatus: validateAxiosStatus,
+        },
       );
     });
 
@@ -152,14 +174,14 @@ describe('forma', () => {
           success: false,
           errors: { message: 'JWT token is invalid' },
           message: 'JWT token is invalid',
-          status: 401
-        }
+          status: 401,
+        },
       };
 
       mockAxios.get.mockResolvedValue(errorResponse);
 
       await expect(getBenefits('invalid-token')).rejects.toThrow(
-        'Your Forma access token is invalid. Please log in again with `npx formanator login`.'
+        'Your Forma access token is invalid. Please log in again with `npx formanator login`.',
       );
     });
   });
@@ -174,9 +196,9 @@ describe('forma', () => {
               {
                 id: 'wallet-1',
                 company_wallet_configuration: { wallet_name: 'Health & Wellness' },
-                is_employee_eligible: true
-              }
-            ]
+                is_employee_eligible: true,
+              },
+            ],
           },
           company: {
             company_wallet_configurations: [
@@ -191,16 +213,16 @@ describe('forma', () => {
                       {
                         name: 'Gym Membership',
                         value: 'gym',
-                        aliases: ['fitness', 'workout']
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        }
-      }
+                        aliases: ['fitness', 'workout'],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
     };
 
     it('should return categories with aliases for existing benefit', async () => {
@@ -215,7 +237,7 @@ describe('forma', () => {
           subcategory_name: 'Gym Membership',
           subcategory_value: 'gym',
           subcategory_alias: null,
-          benefit_id: 'wallet-1'
+          benefit_id: 'wallet-1',
         },
         {
           category_id: 'cat-1',
@@ -223,7 +245,7 @@ describe('forma', () => {
           subcategory_name: 'Gym Membership',
           subcategory_value: 'gym',
           subcategory_alias: 'fitness',
-          benefit_id: 'wallet-1'
+          benefit_id: 'wallet-1',
         },
         {
           category_id: 'cat-1',
@@ -231,16 +253,17 @@ describe('forma', () => {
           subcategory_name: 'Gym Membership',
           subcategory_value: 'gym',
           subcategory_alias: 'workout',
-          benefit_id: 'wallet-1'
-        }
+          benefit_id: 'wallet-1',
+        },
       ]);
     });
 
     it('should throw error for non-existent benefit', async () => {
       mockAxios.get.mockResolvedValue(mockProfileResponse);
 
-      await expect(getCategoriesForBenefitName('test-token', 'Non-existent Benefit'))
-        .rejects.toThrow('Could not find benefit with name `Non-existent Benefit`.');
+      await expect(
+        getCategoriesForBenefitName('test-token', 'Non-existent Benefit'),
+      ).rejects.toThrow('Could not find benefit with name `Non-existent Benefit`.');
     });
   });
 
@@ -262,12 +285,12 @@ describe('forma', () => {
                 reimbursement_vendor: 'Test Gym',
                 date_processed: '2024-01-15',
                 note: 'Monthly membership',
-                employee_note: 'Gym subscription'
-              }
-            }
-          ]
-        }
-      }
+                employee_note: 'Gym subscription',
+              },
+            },
+          ],
+        },
+      },
     };
 
     it('should return transformed claims list', async () => {
@@ -287,16 +310,16 @@ describe('forma', () => {
           reimbursement_vendor: 'Test Gym',
           date_processed: '2024-01-15',
           note: 'Monthly membership',
-          employee_note: 'Gym subscription'
-        }
+          employee_note: 'Gym subscription',
+        },
       ]);
 
       expect(mockAxios.get).toHaveBeenCalledWith(
         'https://api.joinforma.com/client/api/v2/claims?page=0',
         {
           headers: { 'x-auth-token': 'test-token' },
-          validateStatus: validateAxiosStatus
-        }
+          validateStatus: validateAxiosStatus,
+        },
       );
     });
   });
@@ -312,14 +335,15 @@ describe('forma', () => {
       benefitId: 'wallet-1',
       categoryId: 'cat-1',
       subcategoryValue: 'gym',
-      subcategoryAlias: 'fitness'
+      subcategoryAlias: 'fitness',
     };
 
     it('should create claim successfully', async () => {
       const mockResponse = { status: 201, data: { success: true } };
       mockAxios.post.mockResolvedValue(mockResponse);
-      (mockFs.createReadStream as jest.MockedFunction<typeof mockFs.createReadStream>)
-        .mockReturnValue('mock-stream' as any);
+      (
+        mockFs.createReadStream as jest.MockedFunction<typeof mockFs.createReadStream>
+      ).mockReturnValue('mock-stream' as unknown as fs.ReadStream);
 
       await createClaim(mockCreateClaimOptions);
 
@@ -337,38 +361,40 @@ describe('forma', () => {
           subcategory: 'gym',
           subcategory_alias: 'fitness',
           reimbursement_vendor: 'Test Store',
-          file: ['mock-stream']
+          file: ['mock-stream'],
         },
         {
           headers: {
             'Content-Type': 'multipart/form-data',
-            'x-auth-token': 'test-token'
-          }
-        }
+            'x-auth-token': 'test-token',
+          },
+        },
       );
     });
 
     it('should handle subcategory_alias null value', async () => {
       const mockResponse = { status: 201, data: { success: true } };
       mockAxios.post.mockResolvedValue(mockResponse);
-      (mockFs.createReadStream as jest.MockedFunction<typeof mockFs.createReadStream>)
-        .mockReturnValue('mock-stream' as any);
+      (
+        mockFs.createReadStream as jest.MockedFunction<typeof mockFs.createReadStream>
+      ).mockReturnValue('mock-stream' as unknown as fs.ReadStream);
 
       const optionsWithNullAlias = { ...mockCreateClaimOptions, subcategoryAlias: null };
       await createClaim(optionsWithNullAlias);
 
       const postCall = mockAxios.post.mock.calls[0];
-      expect((postCall[1] as any).subcategory_alias).toBe('');
+      expect((postCall[1] as { subcategory_alias: string }).subcategory_alias).toBe('');
     });
 
     it('should throw error when response indicates failure', async () => {
       const mockResponse = { status: 201, data: { success: false } };
       mockAxios.post.mockResolvedValue(mockResponse);
-      (mockFs.createReadStream as jest.MockedFunction<typeof mockFs.createReadStream>)
-        .mockReturnValue('mock-stream' as any);
+      (
+        mockFs.createReadStream as jest.MockedFunction<typeof mockFs.createReadStream>
+      ).mockReturnValue('mock-stream' as unknown as fs.ReadStream);
 
       await expect(createClaim(mockCreateClaimOptions)).rejects.toThrow(
-        'Something went wrong while submitting your claim. Received a `201 Created` response, but the response body indicated that the request was not successful: {"success":false}.'
+        'Something went wrong while submitting your claim. Received a `201 Created` response, but the response body indicated that the request was not successful: {"success":false}.',
       );
     });
 
@@ -379,12 +405,13 @@ describe('forma', () => {
           success: false,
           errors: { message: 'Invalid data' },
           message: 'Invalid data',
-          status: 400
-        }
+          status: 400,
+        },
       };
       mockAxios.post.mockResolvedValue(mockResponse);
-      (mockFs.createReadStream as jest.MockedFunction<typeof mockFs.createReadStream>)
-        .mockReturnValue('mock-stream' as any);
+      (
+        mockFs.createReadStream as jest.MockedFunction<typeof mockFs.createReadStream>
+      ).mockReturnValue('mock-stream' as unknown as fs.ReadStream);
 
       await expect(createClaim(mockCreateClaimOptions)).rejects.toThrow('Invalid data');
     });
@@ -392,7 +419,10 @@ describe('forma', () => {
 
   describe('requestMagicLink', () => {
     it('should request magic link successfully', async () => {
-      const mockResponse = { status: 200, data: { success: true, status: 200, data: { done: true } } };
+      const mockResponse = {
+        status: 200,
+        data: { success: true, status: 200, data: { done: true } },
+      };
       mockAxios.post.mockResolvedValue(mockResponse);
 
       await requestMagicLink('test@example.com');
@@ -400,16 +430,19 @@ describe('forma', () => {
       expect(mockAxios.post).toHaveBeenCalledWith(
         'https://api.joinforma.com/client/auth/v2/login/magic',
         { email: 'test@example.com' },
-        { validateStatus: validateAxiosStatus }
+        { validateStatus: validateAxiosStatus },
       );
     });
 
     it('should throw error when success is false', async () => {
-      const mockResponse = { status: 200, data: { success: false, status: 200, data: { done: false } } };
+      const mockResponse = {
+        status: 200,
+        data: { success: false, status: 200, data: { done: false } },
+      };
       mockAxios.post.mockResolvedValue(mockResponse);
 
       await expect(requestMagicLink('test@example.com')).rejects.toThrow(
-        'Something went wrong while requesting magic link - received a `200 OK` response, but the response body indicated that the request was not successful: {"success":false,"status":200,"data":{"done":false}}'
+        'Something went wrong while requesting magic link - received a `200 OK` response, but the response body indicated that the request was not successful: {"success":false,"status":200,"data":{"done":false}}',
       );
     });
   });
@@ -418,7 +451,7 @@ describe('forma', () => {
     it('should exchange tokens successfully', async () => {
       const mockResponse = {
         status: 200,
-        data: { success: true, status: 200, data: { auth_token: 'new-access-token' } }
+        data: { success: true, status: 200, data: { auth_token: 'new-access-token' } },
       };
       mockAxios.get.mockResolvedValue(mockResponse);
 
@@ -426,16 +459,19 @@ describe('forma', () => {
 
       expect(result).toBe('new-access-token');
       expect(mockAxios.get).toHaveBeenCalledWith(
-        'https://api.joinforma.com/client/auth/v2/login/magic?id=test-id&tk=test-tk&return_token=true'
+        'https://api.joinforma.com/client/auth/v2/login/magic?id=test-id&tk=test-tk&return_token=true',
       );
     });
 
     it('should throw error when success is false', async () => {
-      const mockResponse = { status: 200, data: { success: false, status: 200, data: {} } };
+      const mockResponse = {
+        status: 200,
+        data: { success: false, status: 200, data: {} },
+      };
       mockAxios.get.mockResolvedValue(mockResponse);
 
       await expect(exchangeIdAndTkForAccessToken('test-id', 'test-tk')).rejects.toThrow(
-        'Something went wrong while exchanging magic link for token - received a `200 OK` response, but the response body indicated that the request was not successful: {"success":false,"status":200,"data":{}}'
+        'Something went wrong while exchanging magic link for token - received a `200 OK` response, but the response body indicated that the request was not successful: {"success":false,"status":200,"data":{}}',
       );
     });
   });
@@ -453,10 +489,10 @@ describe('forma', () => {
                   id: 'wallet-1',
                   amount: 500,
                   company_wallet_configuration: { wallet_name: 'Health & Wellness' },
-                  is_employee_eligible: true
-                }
+                  is_employee_eligible: true,
+                },
               ],
-              settings: { currency: 'USD' }
+              settings: { currency: 'USD' },
             },
             company: {
               company_wallet_configurations: [
@@ -467,14 +503,14 @@ describe('forma', () => {
                     {
                       id: 'cat-1',
                       name: 'Fitness',
-                      subcategories: [{ name: 'Gym', value: 'gym', aliases: [] }]
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-        }
+                      subcategories: [{ name: 'Gym', value: 'gym', aliases: [] }],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
       };
 
       mockAxios.get.mockResolvedValue(mockProfileResponse);
@@ -494,10 +530,10 @@ describe('forma', () => {
               subcategory_name: 'Gym',
               subcategory_value: 'gym',
               subcategory_alias: null,
-              benefit_id: 'wallet-1'
-            }
-          ]
-        }
+              benefit_id: 'wallet-1',
+            },
+          ],
+        },
       ]);
     });
   });

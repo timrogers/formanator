@@ -16,8 +16,12 @@ const compat = new FlatCompat({
 });
 
 export default [
+    {
+        ignores: ["dist/*", "script/*", "eslint.config.mjs", "coverage/**/*", "node_modules/**/*"],
+    },
     ...compat.extends("prettier", "eslint:recommended", "plugin:@typescript-eslint/recommended"),
     {
+        files: ["**/*.ts"],
         plugins: {
             prettier,
             "@typescript-eslint": typescriptEslint,
@@ -26,6 +30,7 @@ export default [
         languageOptions: {
             globals: {
                 ...globals.browser,
+                ...globals.node,
             },
 
             parser: tsParser,
@@ -43,6 +48,24 @@ export default [
         },
     },
     {
-        ignores: ["dist/*", "script/*", "eslint.config.mjs"],
+        files: ["**/*.js"],
+        plugins: {
+            prettier,
+        },
+
+        languageOptions: {
+            globals: {
+                ...globals.browser,
+                ...globals.node,
+                ...globals.jest,
+            },
+
+            ecmaVersion: "latest",
+            sourceType: "module",
+        },
+
+        rules: {
+            "prettier/prettier": "error",
+        },
     }
 ];

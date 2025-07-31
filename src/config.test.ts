@@ -34,7 +34,9 @@ describe('config', () => {
       const result = getAccessToken();
 
       expect(result).toBe('test-token-123');
-      expect(mockFs.readFileSync).toHaveBeenCalledWith('/mock/home/.formanatorrc.json', { encoding: 'utf-8' });
+      expect(mockFs.readFileSync).toHaveBeenCalledWith('/mock/home/.formanatorrc.json', {
+        encoding: 'utf-8',
+      });
     });
 
     it('should handle JSON parsing errors gracefully', () => {
@@ -53,7 +55,7 @@ describe('config', () => {
 
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         '/mock/home/.formanatorrc.json',
-        '{"accessToken":"new-test-token-456"}'
+        '{"accessToken":"new-test-token-456"}',
       );
     });
   });
@@ -61,7 +63,7 @@ describe('config', () => {
   describe('maybeGetAccessToken', () => {
     it('should return provided token when token is provided', () => {
       const providedToken = 'provided-token';
-      
+
       const result = maybeGetAccessToken(providedToken);
 
       expect(result).toBe(providedToken);
@@ -71,7 +73,7 @@ describe('config', () => {
 
     it('should return null when provided token is null and no config exists', () => {
       mockFs.existsSync.mockReturnValue(false);
-      
+
       const result = maybeGetAccessToken(null);
 
       expect(result).toBeNull();
@@ -80,7 +82,7 @@ describe('config', () => {
 
     it('should return null when provided token is undefined and no config exists', () => {
       mockFs.existsSync.mockReturnValue(false);
-      
+
       const result = maybeGetAccessToken(undefined);
 
       expect(result).toBeNull();
@@ -90,7 +92,7 @@ describe('config', () => {
     it('should return config token when provided token is null but config exists', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue('{"accessToken":"config-token"}');
-      
+
       const result = maybeGetAccessToken(null);
 
       expect(result).toBe('config-token');
@@ -99,7 +101,7 @@ describe('config', () => {
     it('should return config token when provided token is empty string but config exists', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue('{"accessToken":"config-token"}');
-      
+
       const result = maybeGetAccessToken('');
 
       expect(result).toBe('config-token');
