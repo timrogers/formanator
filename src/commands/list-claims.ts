@@ -54,13 +54,8 @@ command
         head: tableHeaders,
       });
 
-<<<<<<< Updated upstream
       for (const claim of claims) {
         table.push([
-=======
-      for (const claim of filteredClaims) {
-        const rowData = [
->>>>>>> Stashed changes
           `${claim.reimbursement_vendor}`,
           `${claim.employee_note}`,
           `${claim.amount}`,
