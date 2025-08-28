@@ -33,9 +33,7 @@ command
       const claims = await getClaimsList(accessToken, page);
 
       // Check if any claims have non-null payout_status
-      const hasPayoutStatus = claims.some(
-        (claim) => claim.payout_status !== null,
-      );
+      const hasPayoutStatus = claims.some((claim) => claim.payout_status !== null);
 
       const tableHeaders = [
         'Reimbursement Vendor',
