@@ -66,8 +66,7 @@ command
           ...(hasPayoutStatus ? [`${claim.payout_status}`] : []),
           `${claim.date_processed}`,
           `${claim.note}`,
-        ];
-        table.push(rowData);
+        ]);
       }
 
       console.log(table.toString());
