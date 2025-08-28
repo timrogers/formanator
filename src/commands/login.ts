@@ -2,7 +2,7 @@ import * as commander from 'commander';
 import chalk from 'chalk';
 
 import { actionRunner, prompt } from '../utils.js';
-import { setAccessToken } from '../config.js';
+import { setAccessToken, getEmail } from '../config.js';
 import { exchangeIdAndTkForAccessToken, requestMagicLink } from '../forma.js';
 import VERSION from '../version.js';
 
@@ -93,7 +93,7 @@ command
   .option(
     '--email <email>',
     'Email address used to log in to Forma',
-    process.env.FORMA_EMAIL,
+    process.env.FORMA_EMAIL || getEmail() || undefined,
   )
   .action(
     actionRunner(async (opts: Arguments) => {
@@ -102,7 +102,7 @@ command
 
       const { id, tk } = promptForEmailedMagicLink(email);
       const accessToken = await exchangeIdAndTkForAccessToken(id, tk);
-      setAccessToken(accessToken);
+      setAccessToken(accessToken, email);
 
       console.log(chalk.green('You are now logged in! 🥳'));
     }),

@@ -7,6 +7,7 @@ const CONFIG_PATH = path.join(os.homedir(), CONFIG_FILENAME);
 
 interface Config {
   accessToken: string;
+  email?: string;
 }
 
 export const maybeGetAccessToken = (
@@ -27,7 +28,29 @@ export const getAccessToken = (): string | null => {
   return parsedConfig.accessToken;
 };
 
-export const setAccessToken = (accessToken: string): void => {
-  const config: Config = { accessToken };
+export const getEmail = (): string | null => {
+  if (!existsSync(CONFIG_PATH)) {
+    return null;
+  }
+
+  const rawConfig = readFileSync(CONFIG_PATH, { encoding: 'utf-8' });
+  const parsedConfig = JSON.parse(rawConfig) as Config;
+
+  return parsedConfig.email || null;
+};
+
+export const setAccessToken = (accessToken: string, email?: string): void => {
+  let config: Config = { accessToken };
+  
+  if (existsSync(CONFIG_PATH)) {
+    const rawConfig = readFileSync(CONFIG_PATH, { encoding: 'utf-8' });
+    const existingConfig = JSON.parse(rawConfig) as Config;
+    config = { ...existingConfig, accessToken };
+  }
+  
+  if (email) {
+    config.email = email;
+  }
+  
   writeFileSync(CONFIG_PATH, JSON.stringify(config));
 };
