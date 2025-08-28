@@ -36,7 +36,7 @@ brew install ghostscript graphicsmagick
 To get started, you'll need to connect Formanator to your Forma account. Here's how the process works:
 
 1. Run `npx formanator login`.
-2. Provide your email in one of the three ways:
+2. Provide your email in one of the three ways: (After you log in for the first time, your email address will be remembered.)
     1. At the prompt, enter your email address, then hit Enter.
     2. Set the `FORMA_EMAIL` environment variable
     3. Use the `--email` argument

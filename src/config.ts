@@ -28,29 +28,17 @@ export const getAccessToken = (): string | null => {
   return parsedConfig.accessToken;
 };
 
-export const getEmail = (): string | null => {
+export const getEmail = (): string | undefined => {
   if (!existsSync(CONFIG_PATH)) {
-    return null;
+    return undefined;
   }
 
   const rawConfig = readFileSync(CONFIG_PATH, { encoding: 'utf-8' });
   const parsedConfig = JSON.parse(rawConfig) as Config;
 
-  return parsedConfig.email || null;
+  return parsedConfig.email;
 };
 
-export const setAccessToken = (accessToken: string, email?: string): void => {
-  let config: Config = { accessToken };
-  
-  if (existsSync(CONFIG_PATH)) {
-    const rawConfig = readFileSync(CONFIG_PATH, { encoding: 'utf-8' });
-    const existingConfig = JSON.parse(rawConfig) as Config;
-    config = { ...existingConfig, accessToken };
-  }
-  
-  if (email) {
-    config.email = email;
-  }
-  
-  writeFileSync(CONFIG_PATH, JSON.stringify(config));
+export const storeConfig = ({ accessToken, email }: Config): void => {
+  writeFileSync(CONFIG_PATH, JSON.stringify({ accessToken, email }));
 };
