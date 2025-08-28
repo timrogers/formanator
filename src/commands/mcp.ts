@@ -142,8 +142,7 @@ const createMcpServer = () => {
         }
 
         case 'listClaims': {
-          const page = (args as { page?: number })?.page || 0;
-          const claims = await getClaimsList(accessToken, page);
+          const claims = await getClaimsList(accessToken);
           return {
             content: [
               {
