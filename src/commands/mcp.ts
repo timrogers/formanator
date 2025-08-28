@@ -55,7 +55,8 @@ const createMcpServer = () => {
             properties: {
               filter: {
                 type: 'string',
-                description: 'Filter claims by status or reimbursement status (currently supports: in_progress)',
+                description:
+                  'Filter claims by status or reimbursement status (currently supports: in_progress)',
                 enum: ['in_progress'],
               },
             },

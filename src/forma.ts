@@ -243,8 +243,7 @@ export const getClaimsList = async (
   if (filter === 'in_progress') {
     return allClaims.filter(
       (claim) =>
-        claim.status === 'in_progress' ||
-        claim.reimbursement_status === 'in_progress',
+        claim.status === 'in_progress' || claim.reimbursement_status === 'in_progress',
     );
   }
 
