@@ -11,6 +11,7 @@ const command = new commander.Command();
 interface Arguments {
   accessToken?: string;
   page: string;
+  filter?: string;
 }
 
 command
@@ -19,6 +20,10 @@ command
   .description('List claims in your Forma account and their current status')
   .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
   .option('-p, --page <page>', 'Page number to retrieve (default: 0)', '0')
+  .option(
+    '--filter <filter>',
+    'Filter claims by status (currently supports: in_progress)',
+  )
   .action(
     actionRunner(async (opts: Arguments) => {
       const accessToken = opts.accessToken ?? getAccessToken();
@@ -30,10 +35,25 @@ command
         );
       }
 
+      if (opts.filter && opts.filter !== 'in_progress') {
+        throw new Error(
+          `Invalid filter value '${opts.filter}'. Currently supported filters: in_progress`,
+        );
+      }
+
       const claims = await getClaimsList(accessToken, page);
 
       // Check if any claims have non-null payout_status
       const hasPayoutStatus = claims.some((claim) => claim.payout_status !== null);
+
+      const filteredClaims =
+        opts.filter === 'in_progress'
+          ? claims.filter(
+              (claim) =>
+                claim.status === 'in_progress' ||
+                claim.reimbursement_status === 'in_progress',
+            )
+          : claims;
 
       const tableHeaders = [
         'Reimbursement Vendor',
@@ -52,7 +72,7 @@ command
         head: tableHeaders,
       });
 
-      for (const claim of claims) {
+      for (const claim of filteredClaims) {
         table.push([
           `${claim.reimbursement_vendor}`,
           `${claim.employee_note}`,
