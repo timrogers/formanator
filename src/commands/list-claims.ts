@@ -38,19 +38,13 @@ command
         );
       }
 
-      const claims = await getClaimsList(accessToken);
+      const claims = await getClaimsList(
+        accessToken,
+        opts.filter === 'in_progress' ? 'in_progress' : undefined,
+      );
 
       // Check if any claims have non-null payout_status
       const hasPayoutStatus = claims.some((claim) => claim.payout_status !== null);
-
-      const filteredClaims =
-        opts.filter === 'in_progress'
-          ? claims.filter(
-              (claim) =>
-                claim.status === 'in_progress' ||
-                claim.reimbursement_status === 'in_progress',
-            )
-          : claims;
 
       const tableHeaders = [
         'Reimbursement Vendor',
@@ -69,7 +63,7 @@ command
         head: tableHeaders,
       });
 
-      for (const claim of filteredClaims) {
+      for (const claim of claims) {
         table.push([
           `${claim.reimbursement_vendor}`,
           `${claim.employee_note}`,

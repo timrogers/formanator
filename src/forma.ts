@@ -208,7 +208,10 @@ const getClaims = async (
   return response.data as ClaimsListResponse;
 };
 
-export const getClaimsList = async (accessToken: string): Promise<Claim[]> => {
+export const getClaimsList = async (
+  accessToken: string,
+  filter?: 'in_progress',
+): Promise<Claim[]> => {
   const allClaims: Claim[] = [];
   let currentPage = 0;
   let hasMorePages = true;
@@ -234,6 +237,15 @@ export const getClaimsList = async (accessToken: string): Promise<Claim[]> => {
     // Check if there are more pages
     hasMorePages = response.data.count === response.data.limit;
     currentPage++;
+  }
+
+  // Apply filtering if specified
+  if (filter === 'in_progress') {
+    return allClaims.filter(
+      (claim) =>
+        claim.status === 'in_progress' ||
+        claim.reimbursement_status === 'in_progress',
+    );
   }
 
   return allClaims;
