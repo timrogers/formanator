@@ -2,7 +2,7 @@ import * as commander from 'commander';
 import chalk from 'chalk';
 
 import { actionRunner, prompt } from '../utils.js';
-import { setAccessToken } from '../config.js';
+import { storeConfig, getEmail } from '../config.js';
 import { exchangeIdAndTkForAccessToken, requestMagicLink } from '../forma.js';
 import VERSION from '../version.js';
 
@@ -89,11 +89,13 @@ const promptForEmailedMagicLink = (
 command
   .name('login')
   .version(VERSION)
-  .description('Connect Formanator to your Forma account with a magic link')
+  .description(
+    'Connect Formanator to your Forma account with a magic link. Your email address will be remembered after logging in for the first time.',
+  )
   .option(
     '--email <email>',
-    'Email address used to log in to Forma',
-    process.env.FORMA_EMAIL,
+    'The email address to use to log in to Forma. Defaults to the FORMA_EMAIL environment variable, or the email you last used to log in. If no email address is provided, you will be prompted for your email.',
+    process.env.FORMA_EMAIL || getEmail(),
   )
   .action(
     actionRunner(async (opts: Arguments) => {
@@ -102,7 +104,7 @@ command
 
       const { id, tk } = promptForEmailedMagicLink(email);
       const accessToken = await exchangeIdAndTkForAccessToken(id, tk);
-      setAccessToken(accessToken);
+      storeConfig({ accessToken, email });
 
       console.log(chalk.green('You are now logged in! 🥳'));
     }),
