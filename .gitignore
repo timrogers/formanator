@@ -2,3 +2,4 @@ node_modules
 fixtures
 claims.csv
 dist
+coverage
