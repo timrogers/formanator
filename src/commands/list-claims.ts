@@ -32,19 +32,24 @@ command
 
       const claims = await getClaimsList(accessToken, page);
 
+      // Check if any claims have non-null payout_status
+      const hasPayoutStatus = claims.some((claim) => claim.payout_status !== null);
+
+      const tableHeaders = [
+        'Reimbursement Vendor',
+        'Employee Note',
+        'Amount',
+        'Category',
+        'Subcategory',
+        'Status',
+        'Reimbursement Status',
+        ...(hasPayoutStatus ? ['Payout Status'] : []),
+        'Date Processed',
+        'Note',
+      ];
+
       const table = new Table({
-        head: [
-          'Reimbursement Vendor',
-          'Employee Note',
-          'Amount',
-          'Category',
-          'Subcategory',
-          'Status',
-          'Reimbursement Status',
-          'Payout Status',
-          'Date Processed',
-          'Note',
-        ],
+        head: tableHeaders,
       });
 
       for (const claim of claims) {
@@ -56,7 +61,7 @@ command
           `${claim.subcategory}`,
           `${claim.status}`,
           `${claim.reimbursement_status}`,
-          `${claim.payout_status}`,
+          ...(hasPayoutStatus ? [`${claim.payout_status}`] : []),
           `${claim.date_processed}`,
           `${claim.note}`,
         ]);
