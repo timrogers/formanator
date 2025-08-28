@@ -32,23 +32,35 @@ command
 
       const claims = await getClaimsList(accessToken, page);
 
+      // Check if any claims have non-null payout_status
+      const hasPayoutStatus = filteredClaims.some(
+        (claim) => claim.payout_status !== null,
+      );
+
+      const tableHeaders = [
+        'Reimbursement Vendor',
+        'Employee Note',
+        'Amount',
+        'Category',
+        'Subcategory',
+        'Status',
+        'Reimbursement Status',
+        ...(hasPayoutStatus ? ['Payout Status'] : []),
+        'Date Processed',
+        'Note',
+      ];
+
       const table = new Table({
-        head: [
-          'Reimbursement Vendor',
-          'Employee Note',
-          'Amount',
-          'Category',
-          'Subcategory',
-          'Status',
-          'Reimbursement Status',
-          'Payout Status',
-          'Date Processed',
-          'Note',
-        ],
+        head: tableHeaders,
       });
 
+<<<<<<< Updated upstream
       for (const claim of claims) {
         table.push([
+=======
+      for (const claim of filteredClaims) {
+        const rowData = [
+>>>>>>> Stashed changes
           `${claim.reimbursement_vendor}`,
           `${claim.employee_note}`,
           `${claim.amount}`,
@@ -56,10 +68,11 @@ command
           `${claim.subcategory}`,
           `${claim.status}`,
           `${claim.reimbursement_status}`,
-          `${claim.payout_status}`,
+          ...(hasPayoutStatus ? [`${claim.payout_status}`] : []),
           `${claim.date_processed}`,
           `${claim.note}`,
-        ]);
+        ];
+        table.push(rowData);
       }
 
       console.log(table.toString());
