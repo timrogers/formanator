@@ -89,6 +89,9 @@ interface ClaimsListResponse {
         employee_note: string;
       };
     }>;
+    page: number;
+    limit: string;
+    count: number;
   };
 }
 
@@ -207,22 +210,44 @@ const getClaims = async (
 
 export const getClaimsList = async (
   accessToken: string,
-  page: number,
+  filter?: 'in_progress',
 ): Promise<Claim[]> => {
-  const claims = await getClaims(accessToken, page);
-  return claims.data.claims.map((claim) => ({
-    id: claim.id,
-    status: claim.status,
-    reimbursement_status: claim.reimbursement.status,
-    payout_status: claim.reimbursement.payout_status,
-    amount: claim.reimbursement.amount,
-    category: claim.reimbursement.category,
-    subcategory: claim.reimbursement.subcategory,
-    reimbursement_vendor: claim.reimbursement.reimbursement_vendor,
-    date_processed: claim.reimbursement.date_processed,
-    note: claim.reimbursement.note,
-    employee_note: claim.reimbursement.employee_note,
-  }));
+  const allClaims: Claim[] = [];
+  let currentPage = 0;
+  let hasMorePages = true;
+
+  while (hasMorePages) {
+    const response = await getClaims(accessToken, currentPage);
+    const claims = response.data.claims.map((claim) => ({
+      id: claim.id,
+      status: claim.status,
+      reimbursement_status: claim.reimbursement.status,
+      payout_status: claim.reimbursement.payout_status,
+      amount: claim.reimbursement.amount,
+      category: claim.reimbursement.category,
+      subcategory: claim.reimbursement.subcategory,
+      reimbursement_vendor: claim.reimbursement.reimbursement_vendor,
+      date_processed: claim.reimbursement.date_processed,
+      note: claim.reimbursement.note,
+      employee_note: claim.reimbursement.employee_note,
+    }));
+
+    allClaims.push(...claims);
+
+    // Check if there are more pages
+    hasMorePages = response.data.count === parseInt(response.data.limit);
+    currentPage++;
+  }
+
+  // Apply filtering if specified
+  if (filter === 'in_progress') {
+    return allClaims.filter(
+      (claim) =>
+        claim.status === 'in_progress' || claim.reimbursement_status === 'in_progress',
+    );
+  }
+
+  return allClaims;
 };
 
 export const getBenefits = async (accessToken: string): Promise<Benefit[]> => {

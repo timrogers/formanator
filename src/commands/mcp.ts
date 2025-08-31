@@ -49,14 +49,15 @@ const createMcpServer = () => {
         },
         {
           name: 'listClaims',
-          description: 'List claims in your Forma account with pagination support',
+          description: 'List claims in your Forma account with optional filtering',
           inputSchema: {
             type: 'object',
             properties: {
-              page: {
-                type: 'number',
-                description: 'Page number to retrieve (default: 0)',
-                default: 0,
+              filter: {
+                type: 'string',
+                description:
+                  'Filter claims by status or reimbursement status (currently supports: in_progress)',
+                enum: ['in_progress'],
               },
             },
           },
@@ -142,8 +143,8 @@ const createMcpServer = () => {
         }
 
         case 'listClaims': {
-          const page = (args as { page?: number })?.page || 0;
-          const claims = await getClaimsList(accessToken, page);
+          const { filter } = args as { filter?: 'in_progress' };
+          const claims = await getClaimsList(accessToken, filter);
           return {
             content: [
               {

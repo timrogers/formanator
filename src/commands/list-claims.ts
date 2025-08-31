@@ -10,7 +10,7 @@ const command = new commander.Command();
 
 interface Arguments {
   accessToken?: string;
-  page: string;
+  filter?: string;
 }
 
 command
@@ -18,11 +18,13 @@ command
   .version(VERSION)
   .description('List claims in your Forma account and their current status')
   .option('--access-token <access_token>', 'Access token used to authenticate with Forma')
-  .option('-p, --page <page>', 'Page number to retrieve (default: 0)', '0')
+  .option(
+    '--filter <filter>',
+    'Filter claims by status (currently supports: in_progress)',
+  )
   .action(
     actionRunner(async (opts: Arguments) => {
       const accessToken = opts.accessToken ?? getAccessToken();
-      const page = parseInt(opts.page, 10);
 
       if (!accessToken) {
         throw new Error(
@@ -30,7 +32,16 @@ command
         );
       }
 
-      const claims = await getClaimsList(accessToken, page);
+      if (opts.filter && opts.filter !== 'in_progress') {
+        throw new Error(
+          `Invalid filter value '${opts.filter}'. Currently supported filters: in_progress`,
+        );
+      }
+
+      const claims = await getClaimsList(
+        accessToken,
+        opts.filter === 'in_progress' ? 'in_progress' : undefined,
+      );
 
       // Check if any claims have non-null payout_status
       const hasPayoutStatus = claims.some((claim) => claim.payout_status !== null);
