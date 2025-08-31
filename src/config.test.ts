@@ -6,7 +6,7 @@ jest.mock('os');
 
 import fs from 'fs';
 import os from 'os';
-import { getAccessToken, setAccessToken, maybeGetAccessToken } from '../src/config.js';
+import { getAccessToken, storeConfig, maybeGetAccessToken } from '../src/config.js';
 
 const mockFs = fs as jest.Mocked<typeof fs>;
 const mockOs = os as jest.Mocked<typeof os>;
@@ -47,15 +47,16 @@ describe('config', () => {
     });
   });
 
-  describe('setAccessToken', () => {
-    it('should write access token to config file', () => {
+  describe('storeConfig', () => {
+    it('should write access token and email to config file', () => {
       const testToken = 'new-test-token-456';
+      const testEmail = 'test@example.com';
 
-      setAccessToken(testToken);
+      storeConfig({ accessToken: testToken, email: testEmail });
 
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         '/mock/home/.formanatorrc.json',
-        '{"accessToken":"new-test-token-456"}',
+        '{"accessToken":"new-test-token-456","email":"test@example.com"}',
       );
     });
   });
