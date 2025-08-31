@@ -296,7 +296,7 @@ describe('forma', () => {
     it('should return transformed claims list', async () => {
       mockAxios.get.mockResolvedValue(mockClaimsResponse);
 
-      const result = await getClaimsList('test-token', 0);
+      const result = await getClaimsList('test-token', undefined);
 
       expect(result).toEqual([
         {
