@@ -2,7 +2,7 @@
 
 Formanator allows you to:
 
-* **Submit benefit claims to [Forma](https://www.joinforma.com/) from the command line**, either one-by-one or in bulk
+* **Submit benefit claims to [Forma](https://www.joinforma.com/) and track progress from the command line**, either one-by-one or in bulk
 * **Understand your Forma benefits and track and submit claims from any Model Context Protocol (MCP) client**, for example [Claude Desktop](https://claude.ai/download) or [Visual Studio Code](https://code.visualstudio.com/)
 
 With the power of large language models 🧠👀 - free of charge thanks to [GitHub Models](https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models) - it can even **analyse your receipts and generate your claims automatically**.
@@ -156,15 +156,17 @@ npx formanator submit-claim --amount 2.28 \
 
 ### Retrieving your claims
 
-You can display a list of all your claims, including their current reimbursement status and claim details.
+You can display a list of all your claims, including their current reimbursement status and claim details:
 
 ```bash
 npx formanator list-claims
 ```
 
-Queries are paginated, so you can use the `-p` or `--page` argument to specify paging.
+
+You can filter to show only claims that are in progress using `--filter`:
+
 ```bash
-npx formanator list-claims -p 3
+npx formanator list-claims --filter in_progress
 ```
 
 ## Model Context Protocol (MCP) usage
@@ -200,7 +202,7 @@ You can:
 The MCP server provides three tools:
 
 - **`listBenefitsWithCategories`** - Lists all available benefits with their categories and remaining balances
-- **`listClaims`** - Lists claims with pagination support (accepts optional `page` parameter)
+- **`listClaims`** - Lists claims, with optional filtering for only in progress claims
 - **`createClaim`** - Creates new claims (requires `amount`, `merchant`, `purchaseDate`, `description`, `receiptPath`, `benefit`, and `category` parameters)
 
 You must be logged in with `npx formanator login` before starting the MCP server. The server uses stdio transport for communication with MCP clients.
