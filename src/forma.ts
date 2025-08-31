@@ -90,7 +90,7 @@ interface ClaimsListResponse {
       };
     }>;
     page: number;
-    limit: number;
+    limit: string;
     count: number;
   };
 }
@@ -235,7 +235,7 @@ export const getClaimsList = async (
     allClaims.push(...claims);
 
     // Check if there are more pages
-    hasMorePages = response.data.count === response.data.limit;
+    hasMorePages = response.data.count === parseInt(response.data.limit);
     currentPage++;
   }
 
