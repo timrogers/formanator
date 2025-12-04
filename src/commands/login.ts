@@ -3,15 +3,11 @@ import chalk from 'chalk';
 import open from 'open';
 
 import { actionRunner, prompt } from '../utils.js';
-import { storeConfig, getEmail } from '../config.js';
+import { storeConfig } from '../config.js';
 import { exchangeIdAndTkForAccessToken } from '../forma.js';
 import VERSION from '../version.js';
 
 const command = new commander.Command();
-
-interface Arguments {
-  email?: string;
-}
 
 const parseEmailedFormaMagicLink = (input: string): { id: string; tk: string } => {
   const parsedUrl = new URL(input);
@@ -71,29 +67,25 @@ const promptForEmailedMagicLink = (
 command
   .name('login')
   .version(VERSION)
-  .description(
-    'Connect Formanator to your Forma account with a magic link. Your email address will be remembered after logging in for the first time.',
-  )
-  .option(
-    '--email <email>',
-    'The email address to use to log in to Forma. Defaults to the FORMA_EMAIL environment variable, or the email you last used to log in.',
-    process.env.FORMA_EMAIL || getEmail(),
-  )
+  .description('Connect Formanator to your Forma account with a magic link.')
   .action(
-    actionRunner(async (opts: Arguments) => {
+    actionRunner(async () => {
       console.log(
         chalk.blue(
-          '\nA browser window will now open to the Forma login page.\n' +
+          '\nA browser window will open to the Forma login page.\n' +
             'Please enter your email address and request a magic link.\n' +
             'Once you receive the magic link in your email, come back here to paste it.\n',
         ),
       );
 
+      console.log('Press Enter to open your browser...');
+      prompt('');
+
       await open('https://client.joinforma.com/login?type=magic');
 
       const { id, tk } = promptForEmailedMagicLink();
       const accessToken = await exchangeIdAndTkForAccessToken(id, tk);
-      storeConfig({ accessToken, email: opts.email });
+      storeConfig({ accessToken });
 
       console.log(chalk.green('You are now logged in! 🥳'));
     }),
