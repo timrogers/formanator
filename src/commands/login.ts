@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import open from 'open';
 
 import { actionRunner, prompt } from '../utils.js';
-import { storeConfig } from '../config.js';
+import { storeConfig, getEmail } from '../config.js';
 import { exchangeIdAndTkForAccessToken } from '../forma.js';
 import VERSION from '../version.js';
 
@@ -81,7 +81,9 @@ command
       const { id, tk } = promptForEmailedMagicLink();
       const accessToken = await exchangeIdAndTkForAccessToken(id, tk);
 
-      storeConfig({ accessToken });
+      // Preserve existing email if it was previously stored
+      const existingEmail = getEmail();
+      storeConfig({ accessToken, email: existingEmail });
 
       console.log(chalk.green('You are now logged in! 🥳'));
     }),
