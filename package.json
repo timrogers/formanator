@@ -30,6 +30,7 @@
     "chalk": "^5.3.0",
     "cli-table": "^0.3.11",
     "commander": "^14.0.0",
+    "open": "^10.2.0",
     "openai": "^5.0.1",
     "pdf2pic": "^3.2.0",
     "prompt-sync": "^4.2.0",
