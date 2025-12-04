@@ -5,7 +5,9 @@ export default {
   transform: {
     '^.+\\.ts$': ['ts-jest', { useESM: true }],
   },
-  transformIgnorePatterns: ['node_modules/(?!(chalk|#ansi-styles|prompt-sync|open|define-lazy-prop|is-docker|is-wsl)/)'],
+  transformIgnorePatterns: [
+    'node_modules/(?!(chalk|#ansi-styles|prompt-sync|open|define-lazy-prop|is-docker|is-wsl)/)',
+  ],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
     '^open$': '<rootDir>/__mocks__/open.js',
