@@ -72,13 +72,15 @@ command
     actionRunner(async () => {
       console.log(
         chalk.blue(
-          '\nA browser window will open to the Forma login page.\n' +
-            'Please enter your email address and request a magic link.\n' +
+          "To log in, you'll need to enter your email address on the Forma login page to request a magic link.\n" +
             'Once you receive the magic link in your email, come back here to paste it.\n',
         ),
       );
 
-      console.log('Press Enter to open your browser...');
+      console.log(
+        chalk.yellow('Press Enter to open your browser to the Forma login page...'),
+      );
+
       prompt('');
 
       await open('https://client.joinforma.com/login?type=magic');
