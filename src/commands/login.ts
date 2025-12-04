@@ -1,9 +1,10 @@
 import * as commander from 'commander';
 import chalk from 'chalk';
+import open from 'open';
 
 import { actionRunner, prompt } from '../utils.js';
 import { storeConfig, getEmail } from '../config.js';
-import { exchangeIdAndTkForAccessToken, requestMagicLink } from '../forma.js';
+import { exchangeIdAndTkForAccessToken } from '../forma.js';
 import VERSION from '../version.js';
 
 const command = new commander.Command();
@@ -50,31 +51,12 @@ const parseEmailedFormaMagicLink = (input: string): { id: string; tk: string } =
   return { id, tk };
 };
 
-const EMAIL_REGEX =
-  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
-
-const promptForEmail = (isFirstRun = true): string => {
-  const promptMessage = isFirstRun
-    ? 'Enter the email address you use to log on to Forma, then press Enter.'
-    : chalk.yellow("That doesn't look like a valid email address. Please try again.");
-  console.log(promptMessage);
-
-  const email = prompt('> ');
-
-  if (!EMAIL_REGEX.test(email)) {
-    return promptForEmail(false);
-  } else {
-    return email;
-  }
-};
-
 const promptForEmailedMagicLink = (
-  email: string,
   errorMessage: string | null = null,
 ): { id: string; tk: string } => {
   const promptMessage = errorMessage
     ? chalk.yellow("That doesn't look like a valid magic link. Please try again.")
-    : `Copy and paste the magic link sent to you at ${email}, then press Enter.`;
+    : 'Copy and paste the magic link from your email, then press Enter.';
   console.log(promptMessage);
 
   const emailedMagicLink = prompt('> ');
@@ -82,7 +64,7 @@ const promptForEmailedMagicLink = (
   try {
     return parseEmailedFormaMagicLink(emailedMagicLink);
   } catch (e) {
-    return promptForEmailedMagicLink(email, e);
+    return promptForEmailedMagicLink(e);
   }
 };
 
@@ -94,17 +76,24 @@ command
   )
   .option(
     '--email <email>',
-    'The email address to use to log in to Forma. Defaults to the FORMA_EMAIL environment variable, or the email you last used to log in. If no email address is provided, you will be prompted for your email.',
+    'The email address to use to log in to Forma. Defaults to the FORMA_EMAIL environment variable, or the email you last used to log in.',
     process.env.FORMA_EMAIL || getEmail(),
   )
   .action(
     actionRunner(async (opts: Arguments) => {
-      const email = opts.email ?? promptForEmail();
-      await requestMagicLink(email);
+      console.log(
+        chalk.blue(
+          '\nA browser window will now open to the Forma login page.\n' +
+            'Please enter your email address and request a magic link.\n' +
+            'Once you receive the magic link in your email, come back here to paste it.\n',
+        ),
+      );
 
-      const { id, tk } = promptForEmailedMagicLink(email);
+      await open('https://client.joinforma.com/login?type=magic');
+
+      const { id, tk } = promptForEmailedMagicLink();
       const accessToken = await exchangeIdAndTkForAccessToken(id, tk);
-      storeConfig({ accessToken, email });
+      storeConfig({ accessToken, email: opts.email });
 
       console.log(chalk.green('You are now logged in! 🥳'));
     }),
