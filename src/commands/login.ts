@@ -68,24 +68,36 @@ command
   .name('login')
   .version(VERSION)
   .description('Connect Formanator to your Forma account with a magic link.')
+  .option(
+    '--magic-link <url>',
+    'Provide a magic link directly instead of opening the browser',
+  )
   .action(
-    actionRunner(async () => {
-      console.log(
-        chalk.blue(
-          "To log in, you'll need to enter your email address on the Forma login page to request a magic link.\n" +
-            'Once you receive the magic link in your email, come back here to paste it.\n',
-        ),
-      );
+    actionRunner(async (options: { magicLink?: string }) => {
+      let id: string;
+      let tk: string;
 
-      console.log(
-        chalk.yellow('Press Enter to open your browser to the Forma login page...'),
-      );
+      if (options.magicLink) {
+        ({ id, tk } = parseEmailedFormaMagicLink(options.magicLink));
+      } else {
+        console.log(
+          chalk.blue(
+            "To log in, you'll need to enter your email address on the Forma login page to request a magic link.\n" +
+              'Once you receive the magic link in your email, come back here to paste it.\n',
+          ),
+        );
 
-      prompt('');
+        console.log(
+          chalk.yellow('Press Enter to open your browser to the Forma login page...'),
+        );
 
-      await open('https://client.joinforma.com/login?type=magic');
+        prompt('');
 
-      const { id, tk } = promptForEmailedMagicLink();
+        await open('https://client.joinforma.com/login?type=magic');
+
+        ({ id, tk } = promptForEmailedMagicLink());
+      }
+
       const accessToken = await exchangeIdAndTkForAccessToken(id, tk);
       storeConfig({ accessToken });
 
