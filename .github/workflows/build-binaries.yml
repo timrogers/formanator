@@ -1,0 +1,99 @@
+name: Build and test binaries
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+
+      - name: Build Linux AMD64
+        run: bun build --compile --target=bun-linux-x64 src/index.ts --outfile dist/formanator-linux-amd64
+
+      - name: Build Linux ARM64
+        run: bun build --compile --target=bun-linux-arm64 src/index.ts --outfile dist/formanator-linux-arm64
+
+      - name: Build macOS AMD64
+        run: bun build --compile --target=bun-darwin-x64 src/index.ts --outfile dist/formanator-darwin-amd64
+
+      - name: Build macOS ARM64
+        run: bun build --compile --target=bun-darwin-arm64 src/index.ts --outfile dist/formanator-darwin-arm64
+
+      - name: Build Windows AMD64
+        run: bun build --compile --target=bun-windows-x64 src/index.ts --outfile dist/formanator-windows-amd64.exe
+
+      - name: Upload Linux AMD64
+        uses: actions/upload-artifact@v4
+        with:
+          name: formanator-linux-amd64
+          path: dist/formanator-linux-amd64
+
+      - name: Upload Linux ARM64
+        uses: actions/upload-artifact@v4
+        with:
+          name: formanator-linux-arm64
+          path: dist/formanator-linux-arm64
+
+      - name: Upload macOS AMD64
+        uses: actions/upload-artifact@v4
+        with:
+          name: formanator-darwin-amd64
+          path: dist/formanator-darwin-amd64
+
+      - name: Upload macOS ARM64
+        uses: actions/upload-artifact@v4
+        with:
+          name: formanator-darwin-arm64
+          path: dist/formanator-darwin-arm64
+
+      - name: Upload Windows AMD64
+        uses: actions/upload-artifact@v4
+        with:
+          name: formanator-windows-amd64
+          path: dist/formanator-windows-amd64.exe
+
+  test:
+    needs: build
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: formanator-linux-amd64
+            binary: ./formanator-linux-amd64
+          - os: ubuntu-24.04-arm
+            artifact: formanator-linux-arm64
+            binary: ./formanator-linux-arm64
+          - os: macos-13
+            artifact: formanator-darwin-amd64
+            binary: ./formanator-darwin-amd64
+          - os: macos-14
+            artifact: formanator-darwin-arm64
+            binary: ./formanator-darwin-arm64
+          - os: windows-latest
+            artifact: formanator-windows-amd64
+            binary: ./formanator-windows-amd64.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+
+      - name: Make binary executable
+        if: runner.os != 'Windows'
+        run: chmod +x ${{ matrix.binary }}
+
+      - name: Verify binary runs
+        run: ${{ matrix.binary }} --version
