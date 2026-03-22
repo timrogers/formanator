@@ -6,16 +6,16 @@
   "type": "module",
   "bin": "dist/index.js",
   "scripts": {
-    "build": "npx tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json",
     "prepublish": "npm run build",
-    "prepack": "node script/generate-version-file.cjs > dist/version.js",
+    "prepack": "bun script/generate-version-file.cjs > dist/version.js",
     "lint": "eslint .",
     "lint-and-fix": "eslint . --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "semantic-release": "semantic-release",
-    "dev": "npx ts-node --esm src/index.ts"
+    "dev": "bun src/index.ts"
   },
   "files": [
     "dist"
@@ -63,7 +63,6 @@
     "prettier": "^3.0.0",
     "semantic-release": "^25.0.2",
     "ts-jest": "^29.4.1",
-    "ts-node": "^10.9.1",
     "typescript": "^5.1.6"
   }
 }

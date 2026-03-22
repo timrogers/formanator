@@ -5,16 +5,32 @@ on:
   pull_request:
     branches: [main]
 jobs:
-  build:
+  build-with-bun:
+    name: Build, test and lint with Bun
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install
+      - run: bun run lint
+      - run: bun run test
+      - run: bun run build
+
+  test-with-node-and-npm:
+    name: Test with Node.js and npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 24.x
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run lint
+      - run: npm install
       - run: npm test
-      - run: npm run build

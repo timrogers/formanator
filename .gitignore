@@ -3,3 +3,4 @@ fixtures
 claims.csv
 dist
 coverage
+package-lock.json

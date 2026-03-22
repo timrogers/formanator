@@ -28,11 +28,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: "24"
-          cache: "npm"
+          bun-version: latest
 
       - name: Install JavaScript dependencies
-        run: npm ci
+        run: bun install
