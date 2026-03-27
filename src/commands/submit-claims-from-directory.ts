@@ -1,5 +1,5 @@
 import * as commander from 'commander';
-import { readdirSync, existsSync, mkdirSync, renameSync } from 'fs';
+import { existsSync, mkdirSync, renameSync } from 'fs';
 import { join, extname, basename } from 'path';
 import chalk from 'chalk';
 
@@ -9,6 +9,7 @@ import { createClaim, getBenefitsWithCategories } from '../forma.js';
 import { claimParamsToCreateClaimOptions } from '../claims.js';
 import VERSION from '../version.js';
 import { attemptToInferAllFromReceipt } from '../openai.js';
+import { getReceiptFiles, SUPPORTED_EXTENSIONS } from '../receipts.js';
 
 const command = new commander.Command();
 
@@ -19,33 +20,6 @@ interface Arguments {
   openaiApiKey?: string;
   githubToken?: string;
 }
-
-// Supported file extensions for receipts
-const SUPPORTED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.pdf', '.heic'];
-
-// Helper function to check if a file is a supported receipt type
-const isSupportedReceiptFile = (filename: string): boolean => {
-  const ext = extname(filename).toLowerCase();
-  return SUPPORTED_EXTENSIONS.includes(ext);
-};
-
-// Helper function to get all receipt files from directory
-const getReceiptFiles = (directory: string): string[] => {
-  if (!existsSync(directory)) {
-    throw new Error(`Directory '${directory}' does not exist.`);
-  }
-
-  try {
-    const files = readdirSync(directory);
-    return files.filter(isSupportedReceiptFile).map((file) => join(directory, file));
-  } catch (error) {
-    throw new Error(
-      `Could not read directory '${directory}': ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    );
-  }
-};
 
 // Helper function to move file to processed directory
 const moveFileToProcessed = (sourceFile: string, processedDir: string): void => {

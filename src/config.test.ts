@@ -56,7 +56,7 @@ describe('config', () => {
 
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         '/mock/home/.formanatorrc.json',
-        '{"accessToken":"new-test-token-456","email":"test@example.com"}',
+        JSON.stringify({ accessToken: 'new-test-token-456', email: 'test@example.com' }, null, 2),
       );
     });
   });
