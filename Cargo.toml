@@ -1,0 +1,64 @@
+[package]
+name = "formanator"
+version = "3.0.0"
+edition = "2024"
+authors = ["Tim Rogers <me@timrogers.co.uk>"]
+description = "Submit Forma <https://joinforma.com> benefit claims from the command line, with support for AI-powered receipt analysis via OpenAI or GitHub Models"
+homepage = "https://github.com/timrogers/formanator-rust"
+repository = "https://github.com/timrogers/formanator-rust"
+license = "MIT"
+readme = "README.md"
+categories = ["command-line-utilities"]
+keywords = ["forma", "joinforma", "benefits", "expenses", "claims"]
+rust-version = "1.88"
+
+[dependencies]
+anyhow = "1.0"
+async-openai = { version = "0.35", default-features = false, features = ["rustls", "chat-completion"] }
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+clap = { version = "4.5", features = ["derive", "env"] }
+colored = "3"
+csv = "1.3"
+dirs = "6"
+open = "5"
+regex = "1"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "multipart", "rustls-tls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tabled = "0.20"
+tempfile = "3"
+tokio = { version = "1", features = ["rt"] }
+url = "2.5"
+
+# MCP feature dependencies
+rmcp = { version = "1.2", features = ["server", "transport-io", "macros"], optional = true }
+schemars = { version = "1.2", features = ["derive"], optional = true }
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+
+[features]
+default = ["mcp"]
+mcp = [
+    "dep:rmcp",
+    "dep:schemars",
+    "dep:tracing",
+    "dep:tracing-subscriber",
+    "tokio/rt-multi-thread",
+    "tokio/macros",
+    "tokio/io-std",
+]
+
+[dev-dependencies]
+assert_cmd = "2.0"
+httpmock = "0.8"
+predicates = "3"
+serial_test = "3"
+
+[[bin]]
+name = "formanator"
+path = "src/main.rs"
+
+[profile.release]
+strip = true
+lto = "thin"

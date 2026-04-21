@@ -1,0 +1,9 @@
+{
+  "success": false,
+  "data": null,
+  "errors": {
+    "message": "default_employee_wallet_id: default_employee_wallet_id required, amount: amount required, category: category required, subcategory: subcategory required"
+  },
+  "message": "default_employee_wallet_id: default_employee_wallet_id required, amount: amount required, category: category required, subcategory: subcategory required",
+  "status": 400
+}

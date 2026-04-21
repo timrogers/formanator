@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "data": {
+    "company": {
+      "company_wallet_configurations": []
+    },
+    "employee": {
+      "employee_wallets": [],
+      "settings": {
+        "currency": "GBP"
+      }
+    }
+  }
+}

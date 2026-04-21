@@ -1,0 +1,76 @@
+{
+  "success": true,
+  "data": {
+    "id": "newc1aaa-1aaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "type": "reimbursement",
+    "company_id": "globex_industries",
+    "user_id": "11111111-1111-4111-8111-111111111111",
+    "employee_id": "11111111-1111-4111-8111-111111111111",
+    "store": {
+      "excluded_wallet_ids": []
+    },
+    "payment": {
+      "is_refund_transaction": false,
+      "is_external_payment_used": false,
+      "employee_wallets_used": []
+    },
+    "reimbursement": {
+      "tax_info": {
+        "country": "gb",
+        "tax_percentage": 100,
+        "adjusted_tax_amount": null
+      },
+      "included_in_payroll_report": false,
+      "auto_evaluation_method": null,
+      "type": "regular",
+      "status": "in_progress",
+      "transaction_target_date": "2024-01-21T23:59:59.999Z",
+      "payout_status": null,
+      "amount": 23.99,
+      "attachment": [],
+      "transaction_date": "2024-01-21T23:59:59.999Z",
+      "employee_note": "USB-C cables for the home office",
+      "category": "home_office",
+      "category_alias": "",
+      "subcategory": "cables_cords",
+      "subcategory_alias": "",
+      "is_multi_month": true,
+      "default_employee_wallet_id": "wallet-0001-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "company_wallet_configuration_id": "cwc-1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "reimbursement_vendor": "Amazon",
+      "receipts": [
+        "newc1aaa-1aaa-4aaa-8aaa-aaaaaaaaaaaa-receipt-01.pdf"
+      ],
+      "receipts_migrated": false,
+      "is_adjusted": false,
+      "auto_reimbursement_counter": 0,
+      "employee_wallets_used": [],
+      "resubmission_prohibited": false,
+      "date_processed": "2024-01-21T22:24:07.048Z",
+      "note": null,
+      "next_approval_date": "2026-05-02T22:00:00.000Z",
+      "custom_fields": [],
+      "note_id": null
+    },
+    "status": "in_progress",
+    "title": "Reimbursement",
+    "member_editable": false,
+    "submitter": {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "first_name": "Alex",
+      "last_name": "Doe",
+      "email": "alex.doe@globex.example",
+      "submitter_model": "Employee"
+    },
+    "created": "2024-01-21T20:36:18.117Z",
+    "updated": "2026-04-02T18:13:39.198Z",
+    "currency_info": {
+      "currency": "GBP",
+      "country": "gb",
+      "exchange_rate": 0.79,
+      "exchange_rate_date": "2024-01-01T00:00:00.000Z",
+      "usd_amount": 30.37
+    }
+  },
+  "status": 201
+}
