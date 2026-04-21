@@ -85,10 +85,29 @@ fn resolve_api_config(
 }
 
 fn run_blocking<F: std::future::Future<Output = Result<String>>>(future: F) -> Result<String> {
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .context("Failed to build Tokio runtime for LLM call")?;
+    use std::sync::OnceLock;
+    use tokio::runtime::{Handle, Runtime};
+
+    // If we're already inside a Tokio runtime, reuse its handle rather than
+    // building a new runtime (which would either panic or waste resources).
+    if let Ok(handle) = Handle::try_current() {
+        return tokio::task::block_in_place(|| handle.block_on(future));
+    }
+
+    // Otherwise build a single shared runtime lazily and reuse it across
+    // calls. Building a fresh runtime per LLM request adds substantial
+    // overhead in bulk flows (e.g. submitting a directory of receipts).
+    static RUNTIME: OnceLock<Runtime> = OnceLock::new();
+    let runtime = match RUNTIME.get() {
+        Some(rt) => rt,
+        None => {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .context("Failed to build Tokio runtime for LLM call")?;
+            RUNTIME.get_or_init(|| rt)
+        }
+    };
     runtime.block_on(future)
 }
 
@@ -265,6 +284,11 @@ pub fn infer_all_from_receipt(
 
     let image_path = convert_to_image_if_needed(receipt_path)?;
     let image_b64 = encode_image_to_base64(&image_path)?;
+    // If we converted the receipt to a temporary JPEG, remove it now that
+    // it's been encoded so we don't leak files into the temp directory.
+    if image_path != receipt_path {
+        let _ = std::fs::remove_file(&image_path);
+    }
     let data_url = format!("data:image/jpeg;base64,{image_b64}");
 
     let valid_categories: Vec<String> = benefits_with_categories
@@ -375,12 +399,24 @@ fn convert_to_image_if_needed(receipt_path: &Path) -> Result<PathBuf> {
 
     // Convert the first page of the PDF to a JPEG using GraphicsMagick (which
     // delegates to Ghostscript). This mirrors the upstream `pdf2pic` setup.
-    let tmp_dir = std::env::temp_dir();
+    //
+    // Use a uniquely-named temp file (via the `tempfile` crate) so concurrent
+    // or repeated conversions (e.g. multiple receipts with the same filename
+    // stem in a bulk flow) don't overwrite each other's output.
     let stem = receipt_path
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("receipt");
-    let output = tmp_dir.join(format!("formanator-{stem}-{}.jpg", std::process::id()));
+    let named = tempfile::Builder::new()
+        .prefix(&format!("formanator-{stem}-"))
+        .suffix(".jpg")
+        .rand_bytes(12)
+        .tempfile()
+        .context("Failed to create temporary file for converted PDF receipt")?;
+    // Keep the path but drop the file handle so `gm convert` can write to it.
+    let (_file, output) = named
+        .keep()
+        .context("Failed to persist temporary file for converted PDF receipt")?;
 
     let status = Command::new("gm")
         .args(["convert", "-density", "100", "-resize", "2000x2000"])
@@ -390,19 +426,28 @@ fn convert_to_image_if_needed(receipt_path: &Path) -> Result<PathBuf> {
 
     match status {
         Ok(s) if s.success() && output.exists() => Ok(output),
-        Ok(s) => Err(anyhow!(
-            "Failed to convert PDF receipt at {} to a JPEG: `gm convert` exited with {}. Please ensure GraphicsMagick and Ghostscript are installed (e.g. `brew install graphicsmagick ghostscript` on macOS, or `apt install graphicsmagick ghostscript` on Debian/Ubuntu), or use a JPEG/PNG receipt instead.",
-            receipt_path.display(),
-            s
-        )),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(anyhow!(
-            "Failed to convert PDF receipt at {}: the GraphicsMagick `gm` command was not found on your PATH. Please install GraphicsMagick and Ghostscript (e.g. `brew install graphicsmagick ghostscript` on macOS, or `apt install graphicsmagick ghostscript` on Debian/Ubuntu), or use a JPEG/PNG receipt instead.",
-            receipt_path.display()
-        )),
-        Err(e) => Err(anyhow!(
-            "Failed to invoke `gm convert` to convert PDF receipt at {}: {e}. Please ensure GraphicsMagick and Ghostscript are installed, or use a JPEG/PNG receipt instead.",
-            receipt_path.display()
-        )),
+        Ok(s) => {
+            let _ = std::fs::remove_file(&output);
+            Err(anyhow!(
+                "Failed to convert PDF receipt at {} to a JPEG: `gm convert` exited with {}. Please ensure GraphicsMagick and Ghostscript are installed (e.g. `brew install graphicsmagick ghostscript` on macOS, or `apt install graphicsmagick ghostscript` on Debian/Ubuntu), or use a JPEG/PNG receipt instead.",
+                receipt_path.display(),
+                s
+            ))
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            let _ = std::fs::remove_file(&output);
+            Err(anyhow!(
+                "Failed to convert PDF receipt at {}: the GraphicsMagick `gm` command was not found on your PATH. Please install GraphicsMagick and Ghostscript (e.g. `brew install graphicsmagick ghostscript` on macOS, or `apt install graphicsmagick ghostscript` on Debian/Ubuntu), or use a JPEG/PNG receipt instead.",
+                receipt_path.display()
+            ))
+        }
+        Err(e) => {
+            let _ = std::fs::remove_file(&output);
+            Err(anyhow!(
+                "Failed to invoke `gm convert` to convert PDF receipt at {}: {e}. Please ensure GraphicsMagick and Ghostscript are installed, or use a JPEG/PNG receipt instead.",
+                receipt_path.display()
+            ))
+        }
     }
 }
 

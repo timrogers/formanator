@@ -49,23 +49,28 @@ pub struct CreateClaimParams {
 pub struct FormanatorMcpServer {
     #[allow(dead_code)]
     tool_router: ToolRouter<FormanatorMcpServer>,
+    access_token: String,
 }
 
 impl Default for FormanatorMcpServer {
     fn default() -> Self {
-        Self::new()
+        Self::new(String::new())
     }
 }
 
 #[tool_router]
 impl FormanatorMcpServer {
-    pub fn new() -> Self {
+    pub fn new(access_token: String) -> Self {
         Self {
             tool_router: Self::tool_router(),
+            access_token,
         }
     }
 
-    fn token() -> Result<String, McpError> {
+    fn token(&self) -> Result<String, McpError> {
+        if !self.access_token.is_empty() {
+            return Ok(self.access_token.clone());
+        }
         resolve_access_token(None).map_err(|e| McpError::internal_error(e.to_string(), None))
     }
 
@@ -77,7 +82,7 @@ impl FormanatorMcpServer {
         &self,
         Parameters(_params): Parameters<ListBenefitsParams>,
     ) -> Result<CallToolResult, McpError> {
-        let token = Self::token()?;
+        let token = self.token()?;
         let benefits = get_benefits_with_categories(&token)
             .map_err(|e| McpError::internal_error(e.to_string(), None))?;
         let json = serde_json::to_string_pretty(&benefits)
@@ -93,7 +98,7 @@ impl FormanatorMcpServer {
         &self,
         Parameters(params): Parameters<ListClaimsParams>,
     ) -> Result<CallToolResult, McpError> {
-        let token = Self::token()?;
+        let token = self.token()?;
         let filter = match params.filter.as_deref() {
             None => None,
             Some("in_progress") => Some(ClaimsFilter::InProgress),
@@ -123,7 +128,7 @@ impl FormanatorMcpServer {
         &self,
         Parameters(params): Parameters<CreateClaimParams>,
     ) -> Result<CallToolResult, McpError> {
-        let token = Self::token()?;
+        let token = self.token()?;
         let claim = ClaimInput {
             benefit: params.benefit,
             category: params.category,
@@ -162,7 +167,7 @@ impl ServerHandler for FormanatorMcpServer {
 }
 
 pub fn run(args: McpArgs) -> Result<()> {
-    let _ = resolve_access_token(args.access_token.as_deref())?;
+    let access_token = resolve_access_token(args.access_token.as_deref())?;
 
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -176,7 +181,7 @@ pub fn run(args: McpArgs) -> Result<()> {
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(async {
         tracing::info!("Starting Formanator MCP server");
-        let service = FormanatorMcpServer::new()
+        let service = FormanatorMcpServer::new(access_token)
             .serve(stdio())
             .await
             .map_err(|e| anyhow::anyhow!("Failed to start MCP server: {e}"))?;

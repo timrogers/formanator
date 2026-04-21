@@ -65,8 +65,14 @@ pub fn run(args: ValidateCsvArgs) -> Result<()> {
                 );
                 Ok(())
             } else {
-                let placeholder_benefit = &benefits[0].benefit.name;
-                let placeholder_category = &benefits[0].categories[0].subcategory_name;
+                let placeholder = benefits
+                    .iter()
+                    .find(|b| !b.categories.is_empty())
+                    .ok_or_else(|| anyhow::anyhow!(
+                        "Your account does not have any benefits with categories, so claims with a missing benefit/category cannot be validated."
+                    ))?;
+                let placeholder_benefit = &placeholder.benefit.name;
+                let placeholder_category = &placeholder.categories[0].subcategory_name;
                 let test_claim = ClaimInput {
                     benefit: placeholder_benefit.clone(),
                     category: placeholder_category.clone(),

@@ -27,6 +27,7 @@ reqwest = { version = "0.12", default-features = false, features = ["blocking", 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tabled = "0.20"
+tempfile = "3"
 tokio = { version = "1", features = ["rt"] }
 url = "2.5"
 
@@ -53,7 +54,6 @@ assert_cmd = "2.0"
 httpmock = "0.8"
 predicates = "3"
 serial_test = "3"
-tempfile = "3"
 
 [[bin]]
 name = "formanator"
