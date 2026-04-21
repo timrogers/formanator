@@ -1,5 +1,8 @@
 # Formanator 🤖
 
+> [!NOTE]  
+> 🦀 Formanator is now built with Rust and distributed through Homebrew and Crates.io! [v2.x](https://github.com/timrogers/formanator/releases/tag/v2.1.0), built in TypeScript and distributed through npm, is [still available](https://github.com/timrogers/formanator/releases/tag/v2.1.0).
+
 Formanator allows you to:
 
 * **Submit benefit claims to [Forma](https://www.joinforma.com/) and track progress from the command line**, either one-by-one or in bulk
