@@ -1,212 +1,168 @@
-# Formanator 🤖
+# Formanator (Rust) 🤖🦀
+
+A Rust port of [`timrogers/formanator`](https://github.com/timrogers/formanator).
 
 Formanator allows you to:
 
-* **Submit benefit claims to [Forma](https://www.joinforma.com/) and track progress from the command line**, either one-by-one or in bulk
-* **Understand your Forma benefits and track and submit claims from any Model Context Protocol (MCP) client**, for example [Claude Desktop](https://claude.ai/download) or [Visual Studio Code](https://code.visualstudio.com/)
+- **Submit benefit claims to [Forma](https://www.joinforma.com/) and track progress from the command line**, either one-by-one or in bulk.
+- **Understand your Forma benefits and track and submit claims from any [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) client**, for example [Claude Desktop](https://claude.ai/download) or [Visual Studio Code](https://code.visualstudio.com/).
 
-With the power of large language models 🧠👀 - free of charge thanks to [GitHub Models](https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models) - it can even **analyse your receipts and generate your claims automatically**.
+With the power of large language models 🧠👀 — free of charge thanks to [GitHub Models](https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models) — it can even **analyse your receipts and generate your claims automatically**.
 
-![Screenshot of running `formanator` from a terminal](https://github.com/user-attachments/assets/e053efc8-f4cb-4ea1-8850-6c82d668bf29)
+## Installation
 
-# Installation
+### Pre-built binaries
 
-To use Formanator, make sure you have [Node.js](https://nodejs.org/en) installed. You can then run it directly with `npx` without installing it globally:
+Pre-built binaries are published for Linux, macOS and Windows (x86-64 and ARM64) on every [GitHub release](https://github.com/timrogers/formanator-rust/releases). Download the binary for your platform, mark it executable, and place it on your `PATH`.
 
-```bash
-npx formanator
-```
-
-Alternatively, if you prefer to install it globally, you can run:
+### From Crates.io
 
 ```bash
-npm install -g formanator
+cargo install formanator
 ```
 
-To be able to automatically infer claim details from PDF receipts, you will also need to install Ghostscript and Graphicsmagick:
+### From source
 
 ```bash
-brew install ghostscript graphicsmagick
+git clone https://github.com/timrogers/formanator-rust
+cd formanator-rust
+cargo install --path .
 ```
 
-# Usage
+### Optional: PDF receipt support
 
-## Connecting to your Forma account
+To analyse PDF receipts with the LLM-powered commands, install [GraphicsMagick](http://www.graphicsmagick.org/) and [Ghostscript](https://www.ghostscript.com/), e.g. on macOS:
 
-To get started, you'll need to connect Formanator to your Forma account. Here's how the process works:
+```bash
+brew install graphicsmagick ghostscript
+```
 
-1. Run `npx formanator login`.
-2. Press Enter to open your browser.
-3. A browser window will open to the Forma login page. Enter your email address and request a magic link.
-4. You'll receive an email with a magic link. Go to your inbox and copy the link to your clipboard.
-5. Return to the terminal, paste your magic link, then hit Enter.
-6. You'll be logged in 🥳
+JPEG, PNG and HEIC receipts work out of the box without any extra dependencies.
 
-To remember your login, Formanator stores a `.formanatorrc.json` file in your home directory with your access token.
+## Usage
 
-## Command line usage
+### Connecting to your Forma account
 
-### Configuring GitHub Models or OpenAI for inferring claim details
+To get started, you'll need to connect Formanator to your Forma account:
 
-When submitting a claim, you need to specify several details like amount, merchant, purchase date, description, benefit and category. You can either input these manually, or use a large language model (LLM) to infer them.
+1. Run `formanator login`.
+2. Press Enter to open your browser to the Forma login page.
+3. Enter your email address and request a magic link.
+4. Copy the magic link from your email and paste it into the terminal.
+5. You're logged in 🥳
 
-#### Using GitHub Models to infer claim details
+The access token is stored in `~/.formanatorrc.json` (the same location used by the original Node.js implementation, so the two clients can share state).
 
-[GitHub Models](https://github.blog/news-insights/product-news/introducing-github-models/) gives a generous free tier for various AI models, so you can do this totally free of charge.
+### Configuring an LLM provider (optional, but recommended)
 
-You'll just to configure a GitHub personal access token (PAT) with models access:
+When submitting a claim you can either provide every detail manually or let an LLM infer them. Two providers are supported:
 
-1. Create a [GitHub Token](https://github.com/settings/personal-access-tokens) with read access to GitHub Models.
-2. Set the Token as the `GITHUB_TOKEN` environment variable, or be prepared to pass the `--github-token` argument to every command.
+- **GitHub Models** — free, with a generous quota. Set the `GITHUB_TOKEN` environment variable to a GitHub Personal Access Token with **read access to GitHub Models**, or pass `--github-token`.
+- **OpenAI** — billed to your OpenAI account. Set the `OPENAI_API_KEY` environment variable, or pass `--openai-api-key`.
 
-#### Using OpenAI to infer claim detils
+If both are configured, Formanator prefers OpenAI.
 
-You can also use OpenAI's API to infer claim details. The cost is minimal, at $0.01-0.02 per receipt for full inference, or $0.001 for benefit/category only.
-
-You'll need to configure an OpenAI API key:
-
-1. Set up an OpenAI account and make sure you either (a) have free trial credit available or (b) have set up a payment method. You can check this on the ["Usage"](https://platform.openai.com/account/usage) page.
-2. Create an [OpenAI API key](https://platform.openai.com/account/api-keys).
-3. Set the API key as the `OPENAI_API_KEY` environment variable, or be prepared to pass the `--openai-api-key` argument to every command.
-
-### Submitting claims in bulk (recommended)
+### Submitting claims in bulk
 
 #### Automatically submitting all receipts in a directory (recommended)
 
-You can submit all receipts in a specific directory, using a large language model (LLM) to infer the claim details for each receipt.
-
 ```bash
-# You'll need to set GITHUB_TOKEN or OPENAI_API_KEY, or specify --github-token or --openai-api-key
-npx formanator submit-claims-from-directory --directory input/
+formanator submit-claims-from-directory --directory input/
 ```
 
-All JPG, PNG, PDF and HEIC receipts in the directory will be processed. The tool will allow you to confirm the details for each receipt before submitting.
+All `.jpg`, `.jpeg`, `.png`, `.pdf` and `.heic` receipts in the directory will be analysed by the LLM. You'll be asked to confirm the inferred claim details for each receipt before it's submitted, and successfully-submitted receipts are moved into a `processed/` subdirectory.
 
 #### Manually submitting receipts using a CSV template
 
-You can submit multiple claims at once by generating a template CSV, filling it in, then submitting the whole CSV. Optionally, the tool can infer the benefit and category for each claim.
-
-1. Make sure you're logged in - for more details, see "Connecting to your Forma account" above.
-2. Run `npx formanator generate-template-csv` to generate a CSV template. By default, the template will be saved as `claims.csv`. Optionally, you can specify the `--output-path` argument to choose where to save the template.
-3. If you aren't using OpenAI to infer the benefit and category for each claim, you'll need to figure this out yourself. Get a list of your available benefits by running `npx formanator benefits`. Pick the relevant benefit, and then run `npx formanator categories --benefit <benefit>` to get a list of categories.
-4. Update the template, filling in the columns for each of your claims. If you've configured OpenAI or GitHub Models, you can leave the `benefit` and `category` blank. If you want to attach multiple receipts, you can add comma-separated paths to the `receipt_path` column.
-5. Validate the CSV up-front by running `npx formanator validate-csv --input-path claims.csv`.
-6. Submit your claims by running `npx formanator submit-claims-from-csv --input-path claims.csv`.
-7. If you've configured OpenAI, you'll be given the chance to check the benefit and category it has inferred for each claim.
-8. Your claims will be submitted. If there are any validation errors with any of the rows, or if anything goes wrong during submission, an error message will be displayed, but the tool will continue submitting other claims.
+1. Generate a template: `formanator generate-template-csv` (writes `claims.csv`).
+2. Fill in one row per claim. If you've configured an LLM, you can leave `benefit` and `category` blank to have them inferred from the other fields, or leave every column except `receiptPath` blank to have all claim details inferred from the receipt. Comma-separate paths in the `receiptPath` column to attach multiple receipts.
+3. Optionally validate up-front: `formanator validate-csv --input-path claims.csv`.
+4. Submit: `formanator submit-claims-from-csv --input-path claims.csv`.
 
 ### Submitting a single claim
 
-You have several options for submitting a claim:
-
-#### Option 1: Infer all claim details from receipt (recommended)
-
-If you have configured GitHub Models or OpenAI, you can simply provide a receipt image and let the model extract ALL the details.
+#### Option 1: Infer all claim details from the receipt (recommended)
 
 ```bash
-# You'll need to set GITHUB_TOKEN or OPENAI_API_KEY, or specify --github-token or --openai-api-key
-npx formanator submit-claim --receipt-path "receipt.jpg"
+formanator submit-claim --receipt-path receipt.jpg
 ```
 
-The LLM will analyze your receipt and extract:
-- Amount
-- Merchant name
-- Purchase date
-- Description of items
-- Appropriate benefit and category
+Formanator will ask the LLM to extract the amount, merchant, purchase date, description, benefit and category, show you the result and ask you to confirm before submitting.
 
-You'll be shown the extracted details and asked to confirm before submitting.
-
-**Supported receipt formats**: JPEG, PNG, PDF, and HEIC files (PDF requires GraphicsMagick and Ghostscript)
-
-#### Option 2: Infer beenfit and category from claim details
-
-If you want to provide some details manually, but let the model infer the benefit and category:
+#### Option 2: Provide details manually, infer benefit and category
 
 ```bash
-# You'll need to set GITHUB_TOKEN or OPENAI_API_KEY, or specify --github-token or --openai-api-key
-npx formanator submit-claim --amount 2.28 \
-                        --merchant Amazon \
-                        --description "USB cable" \
-                        --purchase-date 2023-01-15 \
-                        --receipt-path "USB.pdf"
+formanator submit-claim \
+  --amount 2.28 \
+  --merchant Amazon \
+  --description "USB cable" \
+  --purchase-date 2024-01-15 \
+  --receipt-path USB.pdf
 ```
 
-You'll be given the chance to review the inferred details. If you confirm by hitting Enter, your claim will be submitted.
-
-#### Option 2: Manual entry
-
-You can provide all claim details manually, with no LLM inference.
-
-1. Figure out the benefit and category for your claim. Get a list of your available benefits by running `npx formanator benefits`. Pick the relevant benefit, and then run `npx formanator categories --benefit <benefit>` to get a list of categories.
-
-2. Submit your claim by running `npx formanator submit-claim` with all required details:
+#### Option 3: Provide every detail manually
 
 ```bash
-npx formanator submit-claim --amount 2.28 \
-                        --merchant Amazon \
-                        --description "USB cable" \
-                        --purchase-date 2023-01-15 \
-                        --receipt-path "USB.pdf" \
-                        --benefit "Remote Life" \
-                        --category "Cables & Cords"
+formanator submit-claim \
+  --amount 2.28 \
+  --merchant Amazon \
+  --description "USB cable" \
+  --purchase-date 2024-01-15 \
+  --receipt-path USB.pdf \
+  --benefit "Remote Life" \
+  --category "Cables & Cords"
 ```
 
-### Retrieving your claims
+Use `formanator benefits` and `formanator categories --benefit <benefit>` to discover the valid values.
 
-You can display a list of all your claims, including their current reimbursement status and claim details:
-
-```bash
-npx formanator list-claims
-```
-
-
-You can filter to show only claims that are in progress using `--filter`:
+### Listing claims
 
 ```bash
-npx formanator list-claims --filter in_progress
+formanator list-claims
+formanator list-claims --filter in_progress
 ```
 
 ## Model Context Protocol (MCP) usage
 
-Formanator can be run as an [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server, allowing AI assistants and other MCP clients to interact with your Forma account programmatically.
+Formanator can run as an MCP server over stdio so AI assistants can interact with your Forma account programmatically.
 
-You can:
-
-1. Make sure `npm`'s `npx` is available on your computer, and get the path by running `which npx` in a terminal
-1. From the Claude app, open the "Developer" menu, then click "Open App Config File...".
-1. Add the MCP server to the `mcpServers` key in your config:
-
-```json
+```jsonc
 {
   "mcpServers": {
     "formanator": {
-      "command": "/path/to/npx",
-      "args": [
-        "-y",
-        "formanator",
-        "mcp"
-      ]
+      "command": "/path/to/formanator",
+      "args": ["mcp"]
     }
   }
 }
 ```
 
-1. Back in the Claude app, open the "Developer" menu, then click "Reload MCP Configuration".
-1. To check that the MCP server is running, start a chat, then click the "Search and tools" button under the chat input, and check for a "litra" item in the menu.
+The server exposes three tools:
 
-### Tools
+- `list_benefits_with_categories` — list all benefits with their categories and remaining balances.
+- `list_claims` — list claims, with optional filtering (currently only `in_progress`).
+- `create_claim` — create a new claim.
 
-The MCP server provides three tools:
+You must be logged in (`formanator login`) before starting the MCP server.
 
-- **`listBenefitsWithCategories`** - Lists all available benefits with their categories and remaining balances
-- **`listClaims`** - Lists claims, with optional filtering for only in progress claims
-- **`createClaim`** - Creates new claims (requires `amount`, `merchant`, `purchaseDate`, `description`, `receiptPath`, `benefit`, and `category` parameters)
+To build a binary without MCP support (smaller binary, fewer dependencies):
 
-You must be logged in with `npx formanator login` before starting the MCP server. The server uses stdio transport for communication with MCP clients.
+```bash
+cargo install formanator --no-default-features
+```
 
-## Contributing
+## Development
 
-Changes to this project are verioned using [Semantic Versioning](https://semver.org/) and released to `npm` automatically using [`semantic-release`](https://github.com/semantic-release/semantic-release).
+```bash
+cargo build              # build with default features (CLI + MCP)
+cargo test --all-features
+cargo clippy --all-features --all-targets -- -D warnings
+cargo fmt --all
+```
 
-Commit messages must follow [Angular Commit Message Conventions](https://github.com/angular/angular/blob/master/CONTRIBUTING.md#-commit-message-format) so `semantic-release` knows when to release new versions and what version number to use.
+CI is modelled on [`timrogers/litra-rs`](https://github.com/timrogers/litra-rs):
+[`pre-commit.yml`](.github/workflows/pre-commit.yml) runs `cargo fmt`, `cargo check`, `cargo clippy`, codespell and the `pre-commit` hook checks; [`build_and_release.yml`](.github/workflows/build_and_release.yml) builds release binaries for Linux/macOS/Windows on every push, creates a GitHub release with those binaries on tags matching `v*`, and publishes to Crates.io.
+
+## License
+
+[MIT](LICENSE.md). Original Node.js project © Tim Rogers; this Rust port preserves the same license.

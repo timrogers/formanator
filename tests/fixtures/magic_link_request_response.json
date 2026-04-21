@@ -1,0 +1,11 @@
+{
+  "request": {
+    "email": "user@example.com"
+  },
+  "response": {
+    "success": true
+  },
+  "response_unsuccessful": {
+    "success": false
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "success": false,
+  "errors": {
+    "message": "Your JWT token is invalid. Please log in again."
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "id": "chatcmpl-test-category-inference-0001",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "content": "University Program",
+        "role": "assistant"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "created": 1776763214,
+  "model": "gpt-4.1-2025-04-14",
+  "service_tier": "default",
+  "system_fingerprint": "fp_test0000",
+  "object": "chat.completion",
+  "usage": {
+    "prompt_tokens": 583,
+    "completion_tokens": 3,
+    "total_tokens": 586,
+    "prompt_tokens_details": {
+      "audio_tokens": 0,
+      "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+      "accepted_prediction_tokens": 0,
+      "audio_tokens": 0,
+      "reasoning_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  }
+}
