@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import * as commander from 'commander';
+import chalk from 'chalk';
 
 import login from './commands/login.js';
 import benefits from './commands/benefits.js';
@@ -13,6 +14,12 @@ import submitClaimsFromDirectory from './commands/submit-claims-from-directory.j
 import validateCsv from './commands/validate-csv.js';
 import mcp from './commands/mcp.js';
 import VERSION from './version.js';
+
+console.warn(
+  chalk.yellow(
+    '⚠️  Formanator v3.x is now available and is distributed through Homebrew. Visit https://github.com/timrogers/formanator for more information.',
+  ),
+);
 
 const program = new commander.Command();
 
