@@ -1,43 +1,50 @@
-# Formanator (Rust) 🤖🦀
-
-A Rust port of [`timrogers/formanator`](https://github.com/timrogers/formanator).
+# Formanator 🤖
 
 Formanator allows you to:
 
-- **Submit benefit claims to [Forma](https://www.joinforma.com/) and track progress from the command line**, either one-by-one or in bulk.
-- **Understand your Forma benefits and track and submit claims from any [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) client**, for example [Claude Desktop](https://claude.ai/download) or [Visual Studio Code](https://code.visualstudio.com/).
+* **Submit benefit claims to [Forma](https://www.joinforma.com/) and track progress from the command line**, either one-by-one or in bulk
+* **Understand your Forma benefits and track and submit claims from any Model Context Protocol (MCP) client**, for example [Claude Desktop](https://claude.ai/download) or [Visual Studio Code](https://code.visualstudio.com/)
 
-With the power of large language models 🧠👀 — free of charge thanks to [GitHub Models](https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models) — it can even **analyse your receipts and generate your claims automatically**.
+With the power of large language models 🧠👀 - free of charge thanks to [GitHub Models](https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models) - it can even **analyse your receipts and generate your claims automatically**.
 
 ## Installation
 
-### Pre-built binaries
-
-Pre-built binaries are published for Linux, macOS and Windows (x86-64 and ARM64) on every [GitHub release](https://github.com/timrogers/formanator-rust/releases). Download the binary for your platform, mark it executable, and place it on your `PATH`.
-
-### From Crates.io
+### macOS or Linux via [Homebrew](https://brew.sh/)
 
 ```bash
-cargo install formanator
+brew tap timrogers/tap && brew install formanator
 ```
+
+### macOS, Linux, or Windows via [Cargo](https://doc.rust-lang.org/cargo/), Rust's package manager
+
+1. Install [Rust](https://www.rust-lang.org/tools/install) on your machine, if it isn't already installed.
+1. Install the `formanator` crate by running `cargo install formanator`.
+1. Run `formanator --help` to check that everything is working and see the available commands.
+
+### macOS, Linux, or Windows via direct binary download
+
+1. Download the [latest release](https://github.com/timrogers/formanator/releases/latest) for your platform. macOS, Linux, and Windows devices are supported.
+1. Add the binary to your `PATH` (or `$PATH` on Unix-like systems), so you can execute it from your shell/terminal. For the best experience, call it `formanator` (or `formanator.exe` on Windows).
+1. Run `formanator --help` to check that everything is working.
 
 ### From source
 
 ```bash
-git clone https://github.com/timrogers/formanator-rust
-cd formanator-rust
+git clone https://github.com/timrogers/formanator
+cd formanator
 cargo install --path .
 ```
 
 ### Optional: PDF receipt support
 
-To analyse PDF receipts with the LLM-powered commands, install [GraphicsMagick](http://www.graphicsmagick.org/) and [Ghostscript](https://www.ghostscript.com/), e.g. on macOS:
+JPEG, PNG and HEIC receipts work out of the box without any extra dependencies.
+
+To analyse PDF receipts with the LLM-powered commands, install [GraphicsMagick](http://www.graphicsmagick.org/) and [Ghostscript](https://www.ghostscript.com/).
 
 ```bash
+# On macOS:
 brew install graphicsmagick ghostscript
 ```
-
-JPEG, PNG and HEIC receipts work out of the box without any extra dependencies.
 
 ## Usage
 
@@ -159,10 +166,3 @@ cargo test --all-features
 cargo clippy --all-features --all-targets -- -D warnings
 cargo fmt --all
 ```
-
-CI is modelled on [`timrogers/litra-rs`](https://github.com/timrogers/litra-rs):
-[`pre-commit.yml`](.github/workflows/pre-commit.yml) runs `cargo fmt`, `cargo check`, `cargo clippy`, codespell and the `pre-commit` hook checks; [`build_and_release.yml`](.github/workflows/build_and_release.yml) builds release binaries for Linux/macOS/Windows on every push, creates a GitHub release with those binaries on tags matching `v*`, and publishes to Crates.io.
-
-## License
-
-[MIT](LICENSE.md). Original Node.js project © Tim Rogers; this Rust port preserves the same license.
