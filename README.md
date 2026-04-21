@@ -3,9 +3,11 @@
 Formanator allows you to:
 
 * **Submit benefit claims to [Forma](https://www.joinforma.com/) and track progress from the command line**, either one-by-one or in bulk
-* **Understand your Forma benefits and track and submit claims from any Model Context Protocol (MCP) client**, for example [Claude Desktop](https://claude.ai/download) or [Visual Studio Code](https://code.visualstudio.com/)
+* **Understand your Forma benefits and track and submit claims from any Model Context Protocol (MCP) client**, for example [Copilot CLI](https://github.com/features/copilot/cli), [Visual Studio Code](https://code.visualstudio.com/) or [Claude Code](https://code.claude.com/docs/en/overview)
 
 With the power of large language models 🧠👀 - free of charge thanks to [GitHub Models](https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models) - it can even **analyse your receipts and generate your claims automatically**.
+
+![Screenshot of running `formanator` from a terminal](https://github.com/user-attachments/assets/e053efc8-f4cb-4ea1-8850-6c82d668bf29)
 
 ## Installation
 
@@ -37,12 +39,10 @@ cargo install --path .
 
 ### Optional: PDF receipt support
 
-JPEG, PNG and HEIC receipts work out of the box without any extra dependencies.
-
-To analyse PDF receipts with the LLM-powered commands, install [GraphicsMagick](http://www.graphicsmagick.org/) and [Ghostscript](https://www.ghostscript.com/).
+To infer claim details for PDF receipts, you need to have [GraphicsMagick](http://www.graphicsmagick.org/) and [Ghostscript](https://www.ghostscript.com/) installed.
 
 ```bash
-# On macOS:
+# macOS
 brew install graphicsmagick ghostscript
 ```
 
