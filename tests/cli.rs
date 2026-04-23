@@ -36,7 +36,9 @@ fn cli_with_server() -> (MockServer, Command, tempfile::TempDir) {
         .env("FORMANATOR_CONFIG_PATH", &config_path)
         // Reset any color output so predicate matching is reliable.
         .env("NO_COLOR", "1")
-        .env("FORMANATOR_API_BASE", server.base_url());
+        .env("FORMANATOR_API_BASE", server.base_url())
+        // Don't perform real network update checks during tests.
+        .env("FORMANATOR_DISABLE_UPDATE_CHECK", "1");
     // On Windows, `env_clear` strips `SystemRoot`, which the Winsock provider
     // needs to locate its DLLs (%SystemRoot%\System32). Without it spawned
     // subprocesses fail with WSAPROVIDERFAILEDINIT (os error 10106).
@@ -55,6 +57,7 @@ fn cli_with_server() -> (MockServer, Command, tempfile::TempDir) {
 fn help_lists_all_subcommands() {
     Command::cargo_bin("formanator")
         .unwrap()
+        .env("FORMANATOR_DISABLE_UPDATE_CHECK", "1")
         .arg("--help")
         .assert()
         .success()
@@ -73,6 +76,7 @@ fn help_lists_all_subcommands() {
 fn version_prints_crate_version() {
     Command::cargo_bin("formanator")
         .unwrap()
+        .env("FORMANATOR_DISABLE_UPDATE_CHECK", "1")
         .arg("--version")
         .assert()
         .success()
@@ -83,6 +87,7 @@ fn version_prints_crate_version() {
 fn unknown_subcommand_fails() {
     Command::cargo_bin("formanator")
         .unwrap()
+        .env("FORMANATOR_DISABLE_UPDATE_CHECK", "1")
         .arg("definitely-not-a-command")
         .assert()
         .failure();
@@ -94,6 +99,7 @@ fn generate_template_csv_writes_the_template_to_a_fresh_file() {
     let path = dir.path().join("claims.csv");
     Command::cargo_bin("formanator")
         .unwrap()
+        .env("FORMANATOR_DISABLE_UPDATE_CHECK", "1")
         .args(["generate-template-csv", "--output-path"])
         .arg(&path)
         .assert()
@@ -111,6 +117,7 @@ fn generate_template_csv_refuses_to_overwrite_existing_file() {
     std::fs::write(&path, "existing").unwrap();
     Command::cargo_bin("formanator")
         .unwrap()
+        .env("FORMANATOR_DISABLE_UPDATE_CHECK", "1")
         .args(["generate-template-csv", "--output-path"])
         .arg(&path)
         .assert()
@@ -129,6 +136,7 @@ fn benefits_without_login_fails_with_helpful_message() {
         .env("PATH", std::env::var_os("PATH").unwrap_or_default())
         .env("HOME", home.path())
         .env("NO_COLOR", "1")
+        .env("FORMANATOR_DISABLE_UPDATE_CHECK", "1")
         .arg("benefits")
         .assert()
         .failure()
@@ -145,6 +153,7 @@ fn list_claims_rejects_unknown_filter() {
         .env("HOME", home.path())
         .env("FORMANATOR_ACCESS_TOKEN", TOKEN)
         .env("NO_COLOR", "1")
+        .env("FORMANATOR_DISABLE_UPDATE_CHECK", "1")
         .args(["list-claims", "--filter", "bogus"])
         .assert()
         .failure()

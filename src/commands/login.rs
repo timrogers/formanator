@@ -3,7 +3,7 @@ use colored::Colorize;
 use url::Url;
 
 use crate::cli::LoginArgs;
-use crate::config::{Config, store_config};
+use crate::config::{Config, read_config, store_config};
 use crate::forma::exchange_id_and_tk_for_access_token;
 use crate::prompt::prompt;
 use crate::verbose;
@@ -94,9 +94,16 @@ pub fn run(args: LoginArgs) -> Result<()> {
     };
 
     let access_token = exchange_id_and_tk_for_access_token(&id, &tk)?;
+    // Preserve the auto-update check timestamp if a previous config exists, so
+    // logging in doesn't immediately re-trigger the daily update check.
+    let last_update_check_timestamp = read_config()
+        .ok()
+        .flatten()
+        .and_then(|c| c.last_update_check_timestamp);
     store_config(&Config {
         access_token,
         email: None,
+        last_update_check_timestamp,
     })?;
 
     println!("{}", "You are now logged in! 🥳".green());

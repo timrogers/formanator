@@ -63,6 +63,10 @@ To get started, you'll need to connect Formanator to your Forma account:
 
 The access token is stored in `~/.formanatorrc.json` (the same location used by the original Node.js implementation, so the two clients can share state).
 
+### Automatic update checks
+
+Once a day, Formanator checks GitHub for a newer release. When one is available, it prints a yellow notice to stderr before running your command. The check is throttled by recording the last check timestamp in `~/.formanatorrc.json` (alongside your access token), only considers releases that are at least 72 hours old, and times out after 2 seconds so it can't slow the CLI down. To disable the check entirely, set the `FORMANATOR_DISABLE_UPDATE_CHECK` environment variable to any value.
+
 ### Configuring an LLM provider (optional, but recommended)
 
 When submitting a claim you can either provide every detail manually or let an LLM infer them. Two providers are supported:
