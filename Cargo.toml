@@ -1,6 +1,6 @@
 [package]
 name = "formanator"
-version = "3.0.0"
+version = "3.1.0"
 edition = "2024"
 authors = ["Tim Rogers <me@timrogers.co.uk>"]
 description = "Submit Forma <https://joinforma.com> benefit claims from the command line, with support for AI-powered receipt analysis via OpenAI or GitHub Models"
