@@ -26,6 +26,7 @@ fn dispatch(cli: Cli) -> Result<()> {
 }
 
 fn main() -> ExitCode {
+    formanator::update_check::print_update_notification();
     let cli = Cli::parse();
     match dispatch(cli) {
         Ok(()) => ExitCode::SUCCESS,

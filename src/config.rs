@@ -17,6 +17,14 @@ pub struct Config {
     pub access_token: String,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub email: Option<String>,
+    /// Unix timestamp (seconds) of the last auto-update check. Persisted so we
+    /// only check at most once per day across CLI invocations.
+    #[serde(
+        rename = "lastUpdateCheckTimestamp",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
+    pub last_update_check_timestamp: Option<u64>,
 }
 
 fn config_path() -> Result<PathBuf> {
@@ -76,6 +84,7 @@ mod tests {
         let config = Config {
             access_token: "tok".to_string(),
             email: None,
+            ..Config::default()
         };
         let json = serde_json::to_string(&config).unwrap();
         assert!(json.contains("\"accessToken\":\"tok\""), "{json}");
@@ -88,6 +97,7 @@ mod tests {
         let config = Config {
             access_token: "tok".to_string(),
             email: Some("user@example.com".to_string()),
+            ..Config::default()
         };
         let json = serde_json::to_string(&config).unwrap();
         assert!(json.contains("\"email\":\"user@example.com\""), "{json}");
@@ -98,11 +108,20 @@ mod tests {
         let original = Config {
             access_token: "tok".to_string(),
             email: Some("user@example.com".to_string()),
+            last_update_check_timestamp: Some(1_700_000_000),
         };
         let json = serde_json::to_string(&original).unwrap();
+        assert!(
+            json.contains("\"lastUpdateCheckTimestamp\":1700000000"),
+            "{json}"
+        );
         let parsed: Config = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.access_token, original.access_token);
         assert_eq!(parsed.email, original.email);
+        assert_eq!(
+            parsed.last_update_check_timestamp,
+            original.last_update_check_timestamp
+        );
     }
 
     #[test]
