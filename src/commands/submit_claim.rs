@@ -32,6 +32,12 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         bail!("You must specify at least one --receipt-path.");
     }
 
+    for path in &receipt_path {
+        if !path.exists() {
+            bail!("Receipt path '{}' does not exist.", path.display());
+        }
+    }
+
     let has_all_manual = if let (
         Some(benefit),
         Some(category),
