@@ -193,7 +193,7 @@ fn check_for_updates() -> Option<String> {
 /// newer release is available. Errors are intentionally swallowed.
 pub fn print_update_notification() {
     if let Some(latest_version) = check_for_updates() {
-        eprintln!("{}", format_update_message(&latest_version));
+        eprintln!("{}\n", format_update_message(&latest_version));
     }
 }
 
@@ -284,7 +284,7 @@ mod tests {
         assert!(is_release_old_enough("2020-01-01T00:00:00Z"));
         // A release from far in the future should not be old enough.
         assert!(!is_release_old_enough("2099-01-01T00:00:00Z"));
-        // An unparseable timestamp should not be considered old enough.
+        // An unparsable timestamp should not be considered old enough.
         assert!(!is_release_old_enough("invalid"));
     }
 
