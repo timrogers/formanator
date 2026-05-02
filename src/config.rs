@@ -50,7 +50,17 @@ pub fn read_config() -> Result<Option<Config>> {
 }
 
 /// Return the saved access token, if any.
+/// On macOS, prefer the token stored in the user's keychain.
 pub fn get_access_token() -> Result<Option<String>> {
+    // Try the macOS keychain first when available.
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(Some(p)) = keychain_get_password() {
+            if !p.is_empty() {
+                return Ok(Some(p));
+            }
+        }
+    }
     Ok(read_config()?.map(|c| c.access_token))
 }
 
@@ -67,11 +77,53 @@ pub fn resolve_access_token(explicit: Option<&str>) -> Result<String> {
 }
 
 /// Persist the given config to disk.
+/// On macOS, store the access token in the user's keychain and avoid
+/// persisting it in plaintext in the config file.
 pub fn store_config(config: &Config) -> Result<()> {
     let path = config_path()?;
-    let serialised = serde_json::to_string(config)?;
+
+    // Clone so we can zero out the access token before writing the file when
+    // we've stored it securely in the keychain.
+    let mut config_to_write = config.clone();
+
+    #[cfg(target_os = "macos")]
+    {
+        if !config.access_token.is_empty() {
+            keychain_set_password(&config.access_token)?;
+            config_to_write.access_token = String::new();
+        }
+    }
+
+    let serialised = serde_json::to_string(&config_to_write)?;
     fs::write(&path, serialised)
         .with_context(|| format!("Failed to write config file at {}", path.display()))?;
+    Ok(())
+}
+
+// macOS keychain helpers. On non-macOS platforms these are no-ops.
+#[cfg(target_os = "macos")]
+fn keychain_get_password() -> Result<Option<String>> {
+    // Use the `keyring` crate to access the platform keychain.
+    match keyring::Entry::new("formanator", "access-token").get_password() {
+        Ok(pw) => Ok(Some(pw)),
+        Err(_) => Ok(None),
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn keychain_get_password() -> Result<Option<String>> {
+    Ok(None)
+}
+
+#[cfg(target_os = "macos")]
+fn keychain_set_password(pw: &str) -> Result<()> {
+    keyring::Entry::new("formanator", "access-token")
+        .set_password(pw)
+        .map_err(|e| anyhow::anyhow!(e.to_string()))
+}
+
+#[cfg(not(target_os = "macos"))]
+fn keychain_set_password(_pw: &str) -> Result<()> {
     Ok(())
 }
 

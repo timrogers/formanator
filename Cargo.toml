@@ -30,6 +30,7 @@ tabled = "0.20"
 tempfile = "3"
 tokio = { version = "1", features = ["rt"] }
 url = "2.5"
+keyring = "1.0"
 
 # MCP feature dependencies
 rmcp = { version = "1.2", features = ["server", "transport-io", "macros"], optional = true }
