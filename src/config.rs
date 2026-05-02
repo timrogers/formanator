@@ -84,7 +84,7 @@ pub fn store_config(config: &Config) -> Result<()> {
 
     // Clone so we can zero out the access token before writing the file when
     // we've stored it securely in the keychain.
-    let mut config_to_write = config.clone();
+    let config_to_write = config.clone();
 
     #[cfg(target_os = "macos")]
     {
@@ -111,8 +111,15 @@ fn keychain_get_password() -> Result<Option<String>> {
 }
 
 #[cfg(not(target_os = "macos"))]
+#[allow(dead_code)]
 fn keychain_get_password() -> Result<Option<String>> {
     Ok(None)
+}
+
+#[cfg(not(target_os = "macos"))]
+#[allow(dead_code)]
+fn keychain_set_password(_pw: &str) -> Result<()> {
+    Ok(())
 }
 
 #[cfg(target_os = "macos")]
@@ -120,11 +127,6 @@ fn keychain_set_password(pw: &str) -> Result<()> {
     keyring::Entry::new("formanator", "access-token")
         .set_password(pw)
         .map_err(|e| anyhow::anyhow!(e.to_string()))
-}
-
-#[cfg(not(target_os = "macos"))]
-fn keychain_set_password(_pw: &str) -> Result<()> {
-    Ok(())
 }
 
 #[cfg(test)]
