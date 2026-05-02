@@ -58,7 +58,10 @@ pub fn read_config() -> Result<Option<Config>> {
 pub fn get_access_token() -> Result<Option<String>> {
     // Try to get token from Keychain first (on macOS)
     if let Some(token) = keychain::get_access_token()? {
-        return Ok(Some(token));
+        // Filter out empty tokens for consistency
+        if !token.is_empty() {
+            return Ok(Some(token));
+        }
     }
 
     // Fall back to config file
@@ -159,6 +162,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn store_config_separates_token_from_file() {
         // Set a custom config path for testing
         let tmpdir = tempfile::tempdir().unwrap();
