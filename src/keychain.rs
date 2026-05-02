@@ -74,7 +74,7 @@ pub fn delete_access_token() -> Result<()> {
     #[cfg(target_os = "macos")]
     {
         match keyring::Entry::new(SERVICE_NAME, ACCOUNT_NAME) {
-            Ok(entry) => match entry.delete_password() {
+            Ok(entry) => match entry.delete_credential() {
                 Ok(()) => Ok(()),
                 Err(keyring::error::Error::NoEntry) => Ok(()), // Already gone
                 Err(e) => Err(anyhow::anyhow!(
