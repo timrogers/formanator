@@ -102,6 +102,7 @@ mod tests {
 
     #[test]
     #[cfg(target_os = "macos")]
+    #[serial_test::serial]
     fn store_and_retrieve_token() {
         // Clean up before test
         let _ = delete_access_token();
@@ -117,6 +118,7 @@ mod tests {
 
     #[test]
     #[cfg(target_os = "macos")]
+    #[serial_test::serial]
     fn get_nonexistent_token_returns_none() {
         // Clean up first
         let _ = delete_access_token();
@@ -127,6 +129,7 @@ mod tests {
 
     #[test]
     #[cfg(target_os = "macos")]
+    #[serial_test::serial]
     fn delete_token_removes_it() {
         let token = "test-token-to-delete";
         store_access_token(token).expect("store should succeed");
