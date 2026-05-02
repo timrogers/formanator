@@ -9,6 +9,12 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
+// Use the `keyring` crate when available for macOS keychain integration.
+// The crate is a light wrapper and builds on all supported platforms; we only
+// use it at runtime when targetting macOS.
+#[cfg(target_os = "macos")]
+use keyring::Keyring;
+
 const CONFIG_FILENAME: &str = ".formanatorrc.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -49,13 +55,47 @@ pub fn read_config() -> Result<Option<Config>> {
     Ok(Some(parsed))
 }
 
-/// Return the saved access token, if any.
+// macOS keychain helpers. On non-macOS platforms these are no-ops/None.
+#[cfg(target_os = "macos")]
+fn macos_get_keychain_token() -> Result<Option<String>> {
+    let kr = Keyring::new("formanator", "access-token");
+    match kr.get_password() {
+        Ok(p) if !p.is_empty() => Ok(Some(p)),
+        _ => Ok(None),
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn macos_get_keychain_token() -> Result<Option<String>> {
+    Ok(None)
+}
+
+#[cfg(target_os = "macos")]
+fn macos_store_keychain_token(token: &str) -> Result<()> {
+    let kr = Keyring::new("formanator", "access-token");
+    kr.set_password(token)
+        .with_context(|| "Failed to write token to macOS keychain")?;
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn macos_store_keychain_token(_token: &str) -> Result<()> {
+    Ok(())
+}
+
+/// Return the saved access token, if any. On macOS we prefer the user keychain
+/// entry and fall back to the on-disk config file.
 pub fn get_access_token() -> Result<Option<String>> {
+    if let Some(tok) = macos_get_keychain_token()? {
+        if !tok.is_empty() {
+            return Ok(Some(tok));
+        }
+    }
     Ok(read_config()?.map(|c| c.access_token))
 }
 
 /// Resolve an access token from an explicit CLI/env value, falling back to the
-/// saved config file.
+/// saved config (or keychain on macOS).
 pub fn resolve_access_token(explicit: Option<&str>) -> Result<String> {
     if let Some(token) = explicit {
         return Ok(token.to_string());
@@ -66,10 +106,27 @@ pub fn resolve_access_token(explicit: Option<&str>) -> Result<String> {
     }
 }
 
-/// Persist the given config to disk.
+/// Persist the given config. On macOS we store the access token in the user
+/// keychain and avoid persisting it to disk (we write an otherwise-identical
+/// config with an empty access token field). On other platforms we persist
+/// the full config to ~/.formanatorrc.json as before.
 pub fn store_config(config: &Config) -> Result<()> {
+    // If a token is present, attempt to save it to the macOS keychain. This is
+    // a best-effort operation on macOS and a no-op elsewhere.
+    if !config.access_token.is_empty() {
+        macos_store_keychain_token(&config.access_token)?;
+    }
+
+    // Prepare the config to write to disk. On macOS we intentionally avoid
+    // writing the actual token into the file; instead write an empty token so
+    // older clients or other implementations still see the same JSON shape.
+    let mut config_to_write = config.clone();
+    if cfg!(target_os = "macos") {
+        config_to_write.access_token = String::new();
+    }
+
     let path = config_path()?;
-    let serialised = serde_json::to_string(config)?;
+    let serialised = serde_json::to_string(&config_to_write)?;
     fs::write(&path, serialised)
         .with_context(|| format!("Failed to write config file at {}", path.display()))?;
     Ok(())
