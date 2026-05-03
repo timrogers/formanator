@@ -1,7 +1,4 @@
-//! Persistent configuration stored at `~/.formanatorrc.json`.
-//!
-//! This matches the file format used by the original Node.js implementation, so
-//! the two clients can share the same login state.
+//! Persistent configuration stored at `~/.formanator.toml`.
 
 use std::fs;
 use std::path::PathBuf;
@@ -11,21 +8,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::keychain;
 
-const CONFIG_FILENAME: &str = ".formanatorrc.json";
+const CONFIG_FILENAME: &str = ".formanator.toml";
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
-    #[serde(rename = "accessToken")]
     pub access_token: String,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub email: Option<String>,
     /// Unix timestamp (seconds) of the last auto-update check. Persisted so we
     /// only check at most once per day across CLI invocations.
-    #[serde(
-        rename = "lastUpdateCheckTimestamp",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub last_update_check_timestamp: Option<u64>,
 }
 
@@ -46,7 +38,7 @@ pub fn read_config() -> Result<Option<Config>> {
     }
     let raw = fs::read_to_string(&path)
         .with_context(|| format!("Failed to read config file at {}", path.display()))?;
-    let parsed: Config = serde_json::from_str(&raw)
+    let parsed: Config = toml::from_str(&raw)
         .with_context(|| format!("Failed to parse config file at {}", path.display()))?;
     Ok(Some(parsed))
 }
@@ -106,7 +98,8 @@ pub fn store_config(config: &Config) -> Result<()> {
     #[cfg(not(target_os = "macos"))]
     let config_to_write = config.clone();
 
-    let serialised = serde_json::to_string(&config_to_write)?;
+    let serialised =
+        toml::to_string(&config_to_write).context("Failed to serialize config to TOML")?;
     fs::write(&path, serialised)
         .with_context(|| format!("Failed to write config file at {}", path.display()))?;
     Ok(())
@@ -117,16 +110,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn config_serializes_with_camelcase_access_token_and_omits_email() {
+    fn config_serializes_with_snake_case_access_token_and_omits_email() {
         let config = Config {
             access_token: "tok".to_string(),
             email: None,
             ..Config::default()
         };
-        let json = serde_json::to_string(&config).unwrap();
-        assert!(json.contains("\"accessToken\":\"tok\""), "{json}");
+        let toml_str = toml::to_string(&config).unwrap();
+        assert!(toml_str.contains("access_token = \"tok\""), "{toml_str}");
         // `email` is `None`, so it should be skipped.
-        assert!(!json.contains("email"), "{json}");
+        assert!(!toml_str.contains("email"), "{toml_str}");
     }
 
     #[test]
@@ -136,23 +129,26 @@ mod tests {
             email: Some("user@example.com".to_string()),
             ..Config::default()
         };
-        let json = serde_json::to_string(&config).unwrap();
-        assert!(json.contains("\"email\":\"user@example.com\""), "{json}");
+        let toml_str = toml::to_string(&config).unwrap();
+        assert!(
+            toml_str.contains("email = \"user@example.com\""),
+            "{toml_str}"
+        );
     }
 
     #[test]
-    fn config_round_trips_through_json() {
+    fn config_round_trips_through_toml() {
         let original = Config {
             access_token: "tok".to_string(),
             email: Some("user@example.com".to_string()),
             last_update_check_timestamp: Some(1_700_000_000),
         };
-        let json = serde_json::to_string(&original).unwrap();
+        let toml_str = toml::to_string(&original).unwrap();
         assert!(
-            json.contains("\"lastUpdateCheckTimestamp\":1700000000"),
-            "{json}"
+            toml_str.contains("last_update_check_timestamp = 1700000000"),
+            "{toml_str}"
         );
-        let parsed: Config = serde_json::from_str(&json).unwrap();
+        let parsed: Config = toml::from_str(&toml_str).unwrap();
         assert_eq!(parsed.access_token, original.access_token);
         assert_eq!(parsed.email, original.email);
         assert_eq!(
@@ -173,7 +169,7 @@ mod tests {
 
         // Set a custom config path for testing
         let tmpdir = tempfile::tempdir().unwrap();
-        let config_path = tmpdir.path().join(".formanatorrc.json");
+        let config_path = tmpdir.path().join(".formanator.toml");
         unsafe {
             std::env::set_var("FORMANATOR_CONFIG_PATH", &config_path);
         }
