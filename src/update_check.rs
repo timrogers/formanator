@@ -4,8 +4,8 @@
 //! [`timrogers/litra-rs`](https://github.com/timrogers/litra-rs):
 //!
 //! * The check runs at most once per day. The timestamp of the last check is
-//!   persisted in the existing `~/.formanatorrc.json` config file as
-//!   `lastUpdateCheckTimestamp`.
+//!   persisted in the existing `~/.formanator.toml` config file as
+//!   `last_update_check_timestamp`.
 //! * Only releases that are at least 72 hours old are considered, to give
 //!   freshly published releases a chance to be yanked or fixed before users are
 //!   nudged to upgrade.

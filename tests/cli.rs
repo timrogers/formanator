@@ -2,7 +2,7 @@
 //! process. Network-dependent commands are pointed at a local mock HTTP server
 //! via the `FORMANATOR_API_BASE` environment variable, and the config file is
 //! redirected to a temporary directory via `HOME` so the tests don't touch the
-//! user's real `~/.formanatorrc.json`.
+//! user's real `~/.formanator.toml`.
 
 use std::process::Command;
 
@@ -24,7 +24,7 @@ const TOKEN: &str = "test-access-token-abc123";
 fn cli_with_server() -> (MockServer, Command, tempfile::TempDir) {
     let server = MockServer::start();
     let home = tempfile::tempdir().expect("tempdir");
-    let config_path = home.path().join(".formanatorrc.json");
+    let config_path = home.path().join(".formanator.toml");
     let mut cmd = Command::cargo_bin("formanator").expect("binary built");
     // Keep the test environment isolated from any developer config.
     cmd.env_clear()
@@ -479,10 +479,13 @@ fn login_with_magic_link_writes_config_to_home() {
 
     // The CLI should have persisted the access token returned by the mock
     // server into the config path we pointed it at via FORMANATOR_CONFIG_PATH.
-    let config_path = home.path().join(".formanatorrc.json");
-    let saved: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
-    assert_eq!(saved["accessToken"], common::FIXTURE_AUTH_TOKEN);
+    let config_path = home.path().join(".formanator.toml");
+    let saved: toml::Value =
+        toml::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
+    assert_eq!(
+        saved["access_token"].as_str(),
+        Some(common::FIXTURE_AUTH_TOKEN)
+    );
 }
 
 #[test]
@@ -493,7 +496,7 @@ fn login_with_invalid_magic_link_fails_without_writing_config() {
         .assert()
         .failure();
     assert!(
-        !home.path().join(".formanatorrc.json").exists(),
+        !home.path().join(".formanator.toml").exists(),
         "no config file should have been written"
     );
 }
