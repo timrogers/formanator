@@ -9,6 +9,8 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
+use crate::keychain;
+
 const CONFIG_FILENAME: &str = ".formanatorrc.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -50,8 +52,22 @@ pub fn read_config() -> Result<Option<Config>> {
 }
 
 /// Return the saved access token, if any.
+///
+/// On macOS, this checks the Keychain first, then falls back to the config file.
+/// On other platforms, this only checks the config file.
 pub fn get_access_token() -> Result<Option<String>> {
-    Ok(read_config()?.map(|c| c.access_token))
+    // Try to get token from Keychain first (on macOS)
+    if let Some(token) = keychain::get_access_token()? {
+        // Filter out empty tokens for consistency
+        if !token.is_empty() {
+            return Ok(Some(token));
+        }
+    }
+
+    // Fall back to config file
+    Ok(read_config()?
+        .map(|c| c.access_token)
+        .filter(|t| !t.is_empty()))
 }
 
 /// Resolve an access token from an explicit CLI/env value, falling back to the
@@ -66,10 +82,31 @@ pub fn resolve_access_token(explicit: Option<&str>) -> Result<String> {
     }
 }
 
-/// Persist the given config to disk.
+/// Persist the given config to disk and store the token in the system keychain if on macOS.
+///
+/// On macOS: token goes to Keychain, other config (email, timestamps) goes to JSON file
+/// On other platforms: all config including token goes to JSON file (for backward compatibility)
 pub fn store_config(config: &Config) -> Result<()> {
+    // Store token in Keychain on macOS
+    #[cfg(target_os = "macos")]
+    if !config.access_token.is_empty() {
+        keychain::store_access_token(&config.access_token)?;
+    }
+
     let path = config_path()?;
-    let serialised = serde_json::to_string(config)?;
+
+    // Determine what to write to file based on platform
+    #[cfg(target_os = "macos")]
+    let config_to_write = Config {
+        access_token: String::new(),
+        email: config.email.clone(),
+        last_update_check_timestamp: config.last_update_check_timestamp,
+    };
+
+    #[cfg(not(target_os = "macos"))]
+    let config_to_write = config.clone();
+
+    let serialised = serde_json::to_string(&config_to_write)?;
     fs::write(&path, serialised)
         .with_context(|| format!("Failed to write config file at {}", path.display()))?;
     Ok(())
@@ -122,6 +159,63 @@ mod tests {
             parsed.last_update_check_timestamp,
             original.last_update_check_timestamp
         );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn store_config_separates_token_from_file() {
+        // Use the in-process mock keychain so we never touch the real one.
+        // Safety: this test is #[serial_test::serial].
+        unsafe {
+            std::env::set_var("FORMANATOR_USE_MOCK_KEYCHAIN", "1");
+        }
+        keychain::init();
+
+        // Set a custom config path for testing
+        let tmpdir = tempfile::tempdir().unwrap();
+        let config_path = tmpdir.path().join(".formanatorrc.json");
+        unsafe {
+            std::env::set_var("FORMANATOR_CONFIG_PATH", &config_path);
+        }
+
+        let config = Config {
+            access_token: "secret-token-12345".to_string(),
+            email: Some("user@example.com".to_string()),
+            last_update_check_timestamp: Some(1_700_000_000),
+        };
+
+        // Store config
+        store_config(&config).unwrap();
+
+        // Read back the file
+        let file_content = std::fs::read_to_string(&config_path).unwrap();
+
+        // Platform-specific behavior:
+        // On macOS: token should NOT be in file, only metadata
+        // On non-macOS: token SHOULD be in file for backward compatibility
+        #[cfg(target_os = "macos")]
+        {
+            assert!(!file_content.contains("secret-token-12345"));
+            assert!(file_content.contains("user@example.com"));
+            assert!(file_content.contains("1700000000"));
+
+            // Verify token was stored in the (mock) keychain
+            let keychain_token = keychain::get_access_token().unwrap();
+            assert_eq!(keychain_token, Some("secret-token-12345".to_string()));
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            assert!(file_content.contains("secret-token-12345"));
+            assert!(file_content.contains("user@example.com"));
+            assert!(file_content.contains("1700000000"));
+        }
+
+        // Clean up
+        unsafe {
+            std::env::remove_var("FORMANATOR_CONFIG_PATH");
+            std::env::remove_var("FORMANATOR_USE_MOCK_KEYCHAIN");
+        }
     }
 
     #[test]

@@ -61,11 +61,11 @@ To get started, you'll need to connect Formanator to your Forma account:
 4. Copy the magic link from your email and paste it into the terminal.
 5. You're logged in 🥳
 
-The access token is stored in `~/.formanatorrc.json` (the same location used by the original Node.js implementation, so the two clients can share state).
+The access token is securely stored in the system Keychain on macOS. On other platforms, it's stored in `~/.formanatorrc.json` (the same location used by the original Node.js implementation, so the two clients can share state).
 
 ### Automatic update checks
 
-Once a day, Formanator checks GitHub for a newer release. When one is available, it prints a yellow notice to stderr before running your command. The check is throttled by recording the last check timestamp in `~/.formanatorrc.json` (alongside your access token), only considers releases that are at least 72 hours old, and times out after 2 seconds so it can't slow the CLI down. To disable the check entirely, set the `FORMANATOR_DISABLE_UPDATE_CHECK` environment variable to any value.
+Once a day, Formanator checks GitHub for a newer release. When one is available, it prints a yellow notice to stderr before running your command. The check is throttled by recording the last check timestamp in `~/.formanatorrc.json`, only considers releases that are at least 72 hours old, and times out after 2 seconds so it can't slow the CLI down. To disable the check entirely, set the `FORMANATOR_DISABLE_UPDATE_CHECK` environment variable to any value.
 
 ### Configuring an LLM provider (optional, but recommended)
 
