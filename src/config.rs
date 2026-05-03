@@ -1,7 +1,8 @@
-//! Persistent configuration stored at `~/.formanatorrc.json`.
+//! Persistent configuration stored at `~/.formanator.toml` (TOML format).
 //!
-//! This matches the file format used by the original Node.js implementation, so
-//! the two clients can share the same login state.
+//! This matches the file location used by previous clients but uses TOML for
+//! readability and portability. Existing on-disk JSON files are not migrated by
+//! this change.
 
 use std::fs;
 use std::path::PathBuf;
@@ -9,7 +10,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-const CONFIG_FILENAME: &str = ".formanatorrc.json";
+const CONFIG_FILENAME: &str = ".formanator.toml";
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
@@ -44,7 +45,7 @@ pub fn read_config() -> Result<Option<Config>> {
     }
     let raw = fs::read_to_string(&path)
         .with_context(|| format!("Failed to read config file at {}", path.display()))?;
-    let parsed: Config = serde_json::from_str(&raw)
+    let parsed: Config = toml::from_str(&raw)
         .with_context(|| format!("Failed to parse config file at {}", path.display()))?;
     Ok(Some(parsed))
 }
@@ -69,7 +70,7 @@ pub fn resolve_access_token(explicit: Option<&str>) -> Result<String> {
 /// Persist the given config to disk.
 pub fn store_config(config: &Config) -> Result<()> {
     let path = config_path()?;
-    let serialised = serde_json::to_string(config)?;
+    let serialised = toml::to_string(config)?;
     fs::write(&path, serialised)
         .with_context(|| format!("Failed to write config file at {}", path.display()))?;
     Ok(())
@@ -86,10 +87,10 @@ mod tests {
             email: None,
             ..Config::default()
         };
-        let json = serde_json::to_string(&config).unwrap();
-        assert!(json.contains("\"accessToken\":\"tok\""), "{json}");
+        let toml = toml::to_string(&config).unwrap();
+        assert!(toml.contains("accessToken = \"tok\""), "{toml}");
         // `email` is `None`, so it should be skipped.
-        assert!(!json.contains("email"), "{json}");
+        assert!(!toml.contains("email"), "{toml}");
     }
 
     #[test]
@@ -99,8 +100,8 @@ mod tests {
             email: Some("user@example.com".to_string()),
             ..Config::default()
         };
-        let json = serde_json::to_string(&config).unwrap();
-        assert!(json.contains("\"email\":\"user@example.com\""), "{json}");
+        let toml = toml::to_string(&config).unwrap();
+        assert!(toml.contains("email = \"user@example.com\""), "{toml}");
     }
 
     #[test]
@@ -110,12 +111,12 @@ mod tests {
             email: Some("user@example.com".to_string()),
             last_update_check_timestamp: Some(1_700_000_000),
         };
-        let json = serde_json::to_string(&original).unwrap();
+        let toml = toml::to_string(&original).unwrap();
         assert!(
-            json.contains("\"lastUpdateCheckTimestamp\":1700000000"),
-            "{json}"
+            toml.contains("lastUpdateCheckTimestamp = 1700000000"),
+            "{toml}"
         );
-        let parsed: Config = serde_json::from_str(&json).unwrap();
+        let parsed: Config = toml::from_str(&toml).unwrap();
         assert_eq!(parsed.access_token, original.access_token);
         assert_eq!(parsed.email, original.email);
         assert_eq!(

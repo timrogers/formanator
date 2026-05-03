@@ -61,7 +61,7 @@ To get started, you'll need to connect Formanator to your Forma account:
 4. Copy the magic link from your email and paste it into the terminal.
 5. You're logged in 🥳
 
-The access token is stored in `~/.formanatorrc.json` (the same location used by the original Node.js implementation, so the two clients can share state).
+The access token is stored in `~/.formanator.toml` (this CLI now uses TOML; existing JSON files are not migrated).
 
 ### Automatic update checks
 
