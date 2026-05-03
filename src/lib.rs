@@ -7,6 +7,7 @@ pub mod cli;
 pub mod commands;
 pub mod config;
 pub mod forma;
+pub mod keychain;
 pub mod llm;
 #[cfg(feature = "mcp")]
 pub mod mcp;
