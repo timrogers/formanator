@@ -20,12 +20,111 @@ const MOCK_KEYCHAIN_ENV_VAR: &str = "FORMANATOR_USE_MOCK_KEYCHAIN";
 /// Initialise keychain storage. Should be called once at process startup,
 /// before any other function in this module is used.
 ///
-/// When `FORMANATOR_USE_MOCK_KEYCHAIN` is set, swaps in `keyring`'s in-memory
-/// mock credential store (see [`MOCK_KEYCHAIN_ENV_VAR`]). Otherwise this is a
-/// no-op and the platform's native credential store is used.
+/// When `FORMANATOR_USE_MOCK_KEYCHAIN` is set, swaps in an in-process,
+/// in-memory credential store (see [`MOCK_KEYCHAIN_ENV_VAR`]). Otherwise this
+/// is a no-op and the platform's native credential store is used.
+///
+/// Note: keyring's built-in `mock` store is intentionally not used here
+/// because it does not share state across `Entry` instances, and our code
+/// creates a fresh `Entry` per call.
 pub fn init() {
     if std::env::var_os(MOCK_KEYCHAIN_ENV_VAR).is_some_and(|v| !v.is_empty()) {
-        keyring::set_default_credential_builder(keyring::mock::default_credential_builder());
+        keyring::set_default_credential_builder(in_memory::default_credential_builder());
+    }
+}
+
+/// In-process, in-memory credential store used only for tests.
+///
+/// Unlike `keyring::mock`, entries with the same `(target, service, user)`
+/// triple share state, so `set_password` followed by `get_password` on
+/// independently constructed `Entry` instances behaves like a real keystore.
+mod in_memory {
+    use std::any::Any;
+    use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock};
+
+    use keyring::credential::{
+        Credential, CredentialApi, CredentialBuilder, CredentialBuilderApi, CredentialPersistence,
+    };
+    use keyring::error::{Error, Result};
+
+    type Key = (Option<String>, String, String);
+
+    fn store() -> &'static Mutex<HashMap<Key, Vec<u8>>> {
+        static STORE: OnceLock<Mutex<HashMap<Key, Vec<u8>>>> = OnceLock::new();
+        STORE.get_or_init(|| Mutex::new(HashMap::new()))
+    }
+
+    #[derive(Debug)]
+    struct InMemoryCredential {
+        key: Key,
+    }
+
+    impl CredentialApi for InMemoryCredential {
+        fn set_secret(&self, secret: &[u8]) -> Result<()> {
+            store()
+                .lock()
+                .expect("in-memory keychain mutex poisoned")
+                .insert(self.key.clone(), secret.to_vec());
+            Ok(())
+        }
+
+        fn get_secret(&self) -> Result<Vec<u8>> {
+            store()
+                .lock()
+                .expect("in-memory keychain mutex poisoned")
+                .get(&self.key)
+                .cloned()
+                .ok_or(Error::NoEntry)
+        }
+
+        fn delete_credential(&self) -> Result<()> {
+            let removed = store()
+                .lock()
+                .expect("in-memory keychain mutex poisoned")
+                .remove(&self.key);
+            if removed.is_some() {
+                Ok(())
+            } else {
+                Err(Error::NoEntry)
+            }
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+    }
+
+    #[derive(Debug)]
+    struct InMemoryCredentialBuilder;
+
+    impl CredentialBuilderApi for InMemoryCredentialBuilder {
+        fn build(
+            &self,
+            target: Option<&str>,
+            service: &str,
+            user: &str,
+        ) -> Result<Box<Credential>> {
+            Ok(Box::new(InMemoryCredential {
+                key: (
+                    target.map(str::to_owned),
+                    service.to_owned(),
+                    user.to_owned(),
+                ),
+            }))
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+
+        fn persistence(&self) -> CredentialPersistence {
+            CredentialPersistence::ProcessOnly
+        }
+    }
+
+    pub fn default_credential_builder() -> Box<CredentialBuilder> {
+        Box::new(InMemoryCredentialBuilder)
     }
 }
 
@@ -124,7 +223,12 @@ mod tests {
     /// Activate the in-memory mock credential store so tests never touch the
     /// real system Keychain.
     fn use_mock_keychain() {
-        keyring::set_default_credential_builder(keyring::mock::default_credential_builder());
+        // Safety: tests using this helper are marked #[serial_test::serial],
+        // so concurrent mutation of the process environment is prevented.
+        unsafe {
+            std::env::set_var(MOCK_KEYCHAIN_ENV_VAR, "1");
+        }
+        init();
     }
 
     #[test]

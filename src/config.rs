@@ -164,8 +164,12 @@ mod tests {
     #[test]
     #[serial_test::serial]
     fn store_config_separates_token_from_file() {
-        // Use the mock keychain so we never touch the real system Keychain.
-        keyring::set_default_credential_builder(keyring::mock::default_credential_builder());
+        // Use the in-process mock keychain so we never touch the real one.
+        // Safety: this test is #[serial_test::serial].
+        unsafe {
+            std::env::set_var("FORMANATOR_USE_MOCK_KEYCHAIN", "1");
+        }
+        keychain::init();
 
         // Set a custom config path for testing
         let tmpdir = tempfile::tempdir().unwrap();
@@ -210,6 +214,7 @@ mod tests {
         // Clean up
         unsafe {
             std::env::remove_var("FORMANATOR_CONFIG_PATH");
+            std::env::remove_var("FORMANATOR_USE_MOCK_KEYCHAIN");
         }
     }
 
