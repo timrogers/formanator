@@ -34,6 +34,9 @@ fn cli_with_server() -> (MockServer, Command, tempfile::TempDir) {
         // we override the full config path directly instead.
         .env("HOME", home.path())
         .env("FORMANATOR_CONFIG_PATH", &config_path)
+        // Use an in-memory mock keychain so tests neither read from nor write
+        // to the developer's real Keychain.
+        .env("FORMANATOR_USE_MOCK_KEYCHAIN", "1")
         // Reset any color output so predicate matching is reliable.
         .env("NO_COLOR", "1")
         .env("FORMANATOR_API_BASE", server.base_url())
@@ -137,6 +140,7 @@ fn benefits_without_login_fails_with_helpful_message() {
         .env("HOME", home.path())
         .env("NO_COLOR", "1")
         .env("FORMANATOR_DISABLE_UPDATE_CHECK", "1")
+        .env("FORMANATOR_USE_MOCK_KEYCHAIN", "1")
         .arg("benefits")
         .assert()
         .failure()
@@ -478,10 +482,16 @@ fn login_with_magic_link_writes_config_to_home() {
     mock.assert();
 
     // The CLI should have persisted the access token returned by the mock
-    // server into the config path we pointed it at via FORMANATOR_CONFIG_PATH.
+    // server. On macOS the token is stored in the system Keychain (here a
+    // per-subprocess mock store, so it isn't observable from the test) and
+    // the on-disk config file deliberately omits it. On other platforms the
+    // token is written to the JSON config file at FORMANATOR_CONFIG_PATH.
     let config_path = home.path().join(".formanatorrc.json");
     let saved: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
+    #[cfg(target_os = "macos")]
+    assert_eq!(saved["accessToken"], "");
+    #[cfg(not(target_os = "macos"))]
     assert_eq!(saved["accessToken"], common::FIXTURE_AUTH_TOKEN);
 }
 

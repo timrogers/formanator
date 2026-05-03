@@ -11,6 +11,24 @@ const SERVICE_NAME: &str = "formanator";
 #[cfg(target_os = "macos")]
 const ACCOUNT_NAME: &str = "forma-access-token";
 
+/// Environment variable that, when set to a non-empty value, swaps the
+/// `keyring` default credential store for an in-memory mock. This is used by
+/// the integration test suite so tests do not read from or write to the
+/// developer's real Keychain. It must never be set in production.
+const MOCK_KEYCHAIN_ENV_VAR: &str = "FORMANATOR_USE_MOCK_KEYCHAIN";
+
+/// Initialise keychain storage. Should be called once at process startup,
+/// before any other function in this module is used.
+///
+/// When `FORMANATOR_USE_MOCK_KEYCHAIN` is set, swaps in `keyring`'s in-memory
+/// mock credential store (see [`MOCK_KEYCHAIN_ENV_VAR`]). Otherwise this is a
+/// no-op and the platform's native credential store is used.
+pub fn init() {
+    if std::env::var_os(MOCK_KEYCHAIN_ENV_VAR).is_some_and(|v| !v.is_empty()) {
+        keyring::set_default_credential_builder(keyring::mock::default_credential_builder());
+    }
+}
+
 /// Store an access token in the system keychain.
 ///
 /// On macOS, this stores the token in the Keychain.
@@ -45,10 +63,13 @@ pub fn get_access_token() -> Result<Option<String>> {
             Ok(entry) => match entry.get_password() {
                 Ok(password) => Ok(Some(password)),
                 Err(keyring::error::Error::NoEntry) => Ok(None),
-                Err(e) => Err(anyhow::anyhow!(
-                    "Failed to retrieve token from Keychain: {}",
-                    e
-                )),
+                Err(e) => {
+                    // Treat any other error (e.g., no default keychain in a
+                    // sandboxed environment) as "not found" so the caller can
+                    // fall back to file-based storage.
+                    eprintln!("Warning: Could not retrieve token from Keychain: {}", e);
+                    Ok(None)
+                }
             },
             Err(e) => {
                 // If we can't create an entry object, we can't access keychain
@@ -77,10 +98,10 @@ pub fn delete_access_token() -> Result<()> {
             Ok(entry) => match entry.delete_credential() {
                 Ok(()) => Ok(()),
                 Err(keyring::error::Error::NoEntry) => Ok(()), // Already gone
-                Err(e) => Err(anyhow::anyhow!(
-                    "Failed to delete token from Keychain: {}",
-                    e
-                )),
+                Err(e) => {
+                    eprintln!("Warning: Could not delete token from Keychain: {}", e);
+                    Ok(())
+                }
             },
             Err(_) => {
                 // If we can't create an entry, nothing to delete
