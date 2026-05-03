@@ -164,6 +164,9 @@ mod tests {
     #[test]
     #[serial_test::serial]
     fn store_config_separates_token_from_file() {
+        // Use the mock keychain so we never touch the real system Keychain.
+        keyring::set_default_credential_builder(keyring::mock::default_credential_builder());
+
         // Set a custom config path for testing
         let tmpdir = tempfile::tempdir().unwrap();
         let config_path = tmpdir.path().join(".formanatorrc.json");
@@ -191,6 +194,10 @@ mod tests {
             assert!(!file_content.contains("secret-token-12345"));
             assert!(file_content.contains("user@example.com"));
             assert!(file_content.contains("1700000000"));
+
+            // Verify token was stored in the (mock) keychain
+            let keychain_token = keychain::get_access_token().unwrap();
+            assert_eq!(keychain_token, Some("secret-token-12345".to_string()));
         }
 
         #[cfg(not(target_os = "macos"))]

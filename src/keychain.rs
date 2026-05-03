@@ -121,26 +121,43 @@ pub fn delete_access_token() -> Result<()> {
 mod tests {
     use super::*;
 
+    /// Activate the in-memory mock credential store so tests never touch the
+    /// real system Keychain.
+    fn use_mock_keychain() {
+        keyring::set_default_credential_builder(keyring::mock::default_credential_builder());
+    }
+
     #[test]
-    #[cfg(target_os = "macos")]
     #[serial_test::serial]
     fn store_and_retrieve_token() {
+        use_mock_keychain();
+
         // Clean up before test
         let _ = delete_access_token();
 
         let token = "test-token-12345";
         store_access_token(token).expect("store should succeed");
         let retrieved = get_access_token().expect("get should succeed");
+
+        #[cfg(target_os = "macos")]
         assert_eq!(retrieved, Some(token.to_string()));
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            // On non-macOS, keychain functions are no-ops
+            assert_eq!(retrieved, None);
+            let _ = token;
+        }
 
         // Clean up after test
         delete_access_token().expect("cleanup should succeed");
     }
 
     #[test]
-    #[cfg(target_os = "macos")]
     #[serial_test::serial]
     fn get_nonexistent_token_returns_none() {
+        use_mock_keychain();
+
         // Clean up first
         let _ = delete_access_token();
 
@@ -149,24 +166,15 @@ mod tests {
     }
 
     #[test]
-    #[cfg(target_os = "macos")]
     #[serial_test::serial]
     fn delete_token_removes_it() {
+        use_mock_keychain();
+
         let token = "test-token-to-delete";
         store_access_token(token).expect("store should succeed");
 
         delete_access_token().expect("delete should succeed");
         let retrieved = get_access_token().expect("get should succeed");
         assert_eq!(retrieved, None);
-    }
-
-    #[test]
-    #[cfg(not(target_os = "macos"))]
-    fn non_macos_store_is_noop() {
-        // These should not error, just be no-ops
-        store_access_token("token").expect("store should succeed");
-        let retrieved = get_access_token().expect("get should succeed");
-        assert_eq!(retrieved, None);
-        delete_access_token().expect("delete should succeed");
     }
 }
