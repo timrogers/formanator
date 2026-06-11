@@ -33,7 +33,6 @@ pub fn run(args: SubmitClaimsFromCsvArgs) -> Result<()> {
         );
 
         let result = (|| -> Result<()> {
-            let has_llm_key = args.openai_api_key.is_some() || args.github_token.is_some();
             let benefit_category_empty = claim.benefit.is_empty() && claim.category.is_empty();
             let other_details_empty = claim.amount.is_empty()
                 && claim.merchant.is_empty()
@@ -52,7 +51,7 @@ pub fn run(args: SubmitClaimsFromCsvArgs) -> Result<()> {
                 } else {
                     create_claim(&opts)
                 }
-            } else if has_llm_key && benefit_category_empty && other_details_empty {
+            } else if benefit_category_empty && other_details_empty {
                 if claim.receipt_path.is_empty() {
                     anyhow::bail!(
                         "To infer all claim details from the receipt, you must provide at least one path in the `receiptPath` column."
@@ -62,7 +61,8 @@ pub fn run(args: SubmitClaimsFromCsvArgs) -> Result<()> {
                     &claim.receipt_path[0],
                     &benefits,
                     args.openai_api_key.as_deref(),
-                    args.github_token.as_deref(),
+                    args.github_models_token.as_deref(),
+                    args.copilot_cli_path.as_deref(),
                 )?;
                 println!("Inferred amount: {}", inferred.amount);
                 println!("Inferred merchant: {}", inferred.merchant);
@@ -83,13 +83,14 @@ pub fn run(args: SubmitClaimsFromCsvArgs) -> Result<()> {
                 } else {
                     create_claim(&opts)
                 }
-            } else if has_llm_key && benefit_category_empty && other_details_all_filled {
+            } else if benefit_category_empty && other_details_all_filled {
                 let inferred = infer_category_and_benefit(
                     &claim.merchant,
                     &claim.description,
                     &benefits,
                     args.openai_api_key.as_deref(),
-                    args.github_token.as_deref(),
+                    args.github_models_token.as_deref(),
+                    args.copilot_cli_path.as_deref(),
                 )?;
                 claim.benefit = inferred.benefit;
                 claim.category = inferred.category;
@@ -102,13 +103,9 @@ pub fn run(args: SubmitClaimsFromCsvArgs) -> Result<()> {
                 } else {
                     create_claim(&opts)
                 }
-            } else if has_llm_key {
-                anyhow::bail!(
-                    "To use LLM inference, a row must either leave every column except `receiptPath` blank (full receipt inference), or fill every column except `benefit` and `category` (benefit/category inference only)."
-                );
             } else {
                 anyhow::bail!(
-                    "You must either fill out the `benefit` and `category` columns, or specify an OpenAI API key or GitHub token."
+                    "To use LLM inference, a row must either leave every column except `receiptPath` blank (full receipt inference), or fill every column except `benefit` and `category` (benefit/category inference only)."
                 );
             }
         })();
