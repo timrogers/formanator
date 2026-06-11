@@ -73,12 +73,6 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
     verbose::set(args.verbose);
     let access_token = resolve_access_token(args.access_token.as_deref())?;
 
-    if args.openai_api_key.is_none() && args.github_token.is_none() {
-        bail!(
-            "You must provide either an OpenAI API key (--openai-api-key) or GitHub token (--github-token) to infer claim details from receipts."
-        );
-    }
-
     let processed_directory = args
         .processed_directory
         .clone()
@@ -149,7 +143,8 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
                 receipt_file,
                 &benefits,
                 args.openai_api_key.as_deref(),
-                args.github_token.as_deref(),
+                args.github_models_token.as_deref(),
+                args.copilot_cli_path.as_deref(),
             )?;
 
             println!("{}", "\nInferred claim details:".green());

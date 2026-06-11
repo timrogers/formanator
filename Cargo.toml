@@ -10,7 +10,7 @@ license = "MIT"
 readme = "README.md"
 categories = ["command-line-utilities"]
 keywords = ["forma", "joinforma", "benefits", "expenses", "claims"]
-rust-version = "1.88"
+rust-version = "1.94"
 
 [dependencies]
 anyhow = "1.0"
@@ -38,6 +38,7 @@ rmcp = { version = "1.7", features = ["server", "transport-io", "macros"], optio
 schemars = { version = "1.2", features = ["derive"], optional = true }
 tracing = { version = "0.1", optional = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+github-copilot-sdk = { version = "1.0.1", default-features = false }
 
 [features]
 default = ["mcp"]
