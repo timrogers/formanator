@@ -145,6 +145,7 @@ fn infer_category_and_benefit_resolves_llm_response_to_benefit() {
         &bwcs,
         None,
         Some("test-github-token"),
+        None,
     )
     .expect("infer_category_and_benefit should succeed");
 
@@ -188,6 +189,7 @@ fn infer_category_and_benefit_errors_when_llm_returns_unknown_category() {
         &bwcs,
         None,
         Some("test-github-token"),
+        None,
     )
     .expect_err("should reject unknown category");
     assert!(
@@ -215,8 +217,9 @@ fn infer_all_from_receipt_parses_structured_json_response() {
 
     let receipt = fake_jpeg_receipt();
     let bwcs = fixture_benefits_with_categories();
-    let result = infer_all_from_receipt(receipt.path(), &bwcs, None, Some("test-github-token"))
-        .expect("infer_all_from_receipt should succeed");
+    let result =
+        infer_all_from_receipt(receipt.path(), &bwcs, None, Some("test-github-token"), None)
+            .expect("infer_all_from_receipt should succeed");
 
     mock.assert();
     assert_eq!(result.amount, "3670.00");
@@ -265,7 +268,7 @@ fn infer_all_from_receipt_rejects_invalid_date_format() {
 
     let receipt = fake_jpeg_receipt();
     let bwcs = fixture_benefits_with_categories();
-    let err = infer_all_from_receipt(receipt.path(), &bwcs, None, Some("test-github-token"))
+    let err = infer_all_from_receipt(receipt.path(), &bwcs, None, Some("test-github-token"), None)
         .expect_err("should reject bad date");
     assert!(format!("{err}").contains("invalid date format"), "{err}");
 }
@@ -297,8 +300,9 @@ fn infer_all_from_receipt_strips_markdown_code_fences() {
 
     let receipt = fake_jpeg_receipt();
     let bwcs = fixture_benefits_with_categories();
-    let result = infer_all_from_receipt(receipt.path(), &bwcs, None, Some("test-github-token"))
-        .expect("should parse fenced JSON");
+    let result =
+        infer_all_from_receipt(receipt.path(), &bwcs, None, Some("test-github-token"), None)
+            .expect("should parse fenced JSON");
     assert_eq!(result.amount, "42.00");
     assert_eq!(result.category, "University Program");
 }
@@ -309,14 +313,16 @@ fn infer_all_from_receipt_strips_markdown_code_fences() {
 
 #[test]
 #[serial]
-fn infer_category_and_benefit_errors_when_no_key_is_provided() {
-    // No server mock is needed — resolve_api_config must fail before any
-    // HTTP request is attempted.
+fn infer_category_and_benefit_falls_back_to_copilot_and_fails_with_bogus_cli_path() {
+    // With no OpenAI key or GitHub token, inference falls back to the GitHub
+    // Copilot CLI. Pointing at a non-existent CLI binary must surface an error
+    // rather than silently succeeding — this keeps the test hermetic even in
+    // environments where a real `copilot` binary is on PATH.
     let bwcs = fixture_benefits_with_categories();
-    let err =
-        infer_category_and_benefit("m", "d", &bwcs, None, None).expect_err("should require a key");
-    assert!(
-        format!("{err}").contains("GitHub token or an OpenAI API key"),
-        "{err}"
-    );
+    let bogus = std::path::Path::new("/no/such/copilot-cli-binary");
+    let err = infer_category_and_benefit("m", "d", &bwcs, None, None, Some(bogus))
+        .expect_err("should fail to launch the bogus Copilot CLI");
+    // Just assert that an error was produced; the exact message comes from the
+    // SDK / OS and is not stable across platforms.
+    assert!(!format!("{err}").is_empty(), "{err}");
 }

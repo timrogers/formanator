@@ -367,15 +367,22 @@ fn submit_claim_submits_a_full_multipart_request_to_the_mock_server() {
 
 #[test]
 #[serial]
-fn submit_claim_without_required_args_or_llm_key_fails_with_explanation() {
+fn submit_claim_with_bogus_copilot_cli_path_fails_with_explanation() {
+    // With no OpenAI key or GitHub token, a receipt-only claim falls back to the
+    // GitHub Copilot CLI. Pointing at a non-existent CLI binary keeps the test
+    // hermetic (no real inference) while still exercising the fallback path.
     let (_server, mut cmd, _home) = cli_with_server();
     let receipt = make_fake_receipt();
     cmd.env("FORMANATOR_ACCESS_TOKEN", TOKEN)
-        .args(["submit-claim", "--receipt-path"])
+        .args([
+            "submit-claim",
+            "--copilot-cli-path",
+            "/no/such/copilot-cli-binary",
+            "--receipt-path",
+        ])
         .arg(receipt.path())
         .assert()
-        .failure()
-        .stderr(contains("OpenAI API key").or(contains("GitHub token")));
+        .failure();
 }
 
 #[test]

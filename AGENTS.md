@@ -7,7 +7,7 @@
 - `src/cli.rs` defines the Clap CLI surface.
 - `src/commands/` contains one handler per subcommand.
 - `src/lib.rs` exposes shared modules such as Forma API access, claim handling, config, prompts, LLM integration, and MCP support.
-- The default feature set includes `mcp`; the crate targets Rust edition 2024 and has an MSRV of Rust 1.88.
+- The default feature set includes `mcp`; the crate targets Rust edition 2024 and has an MSRV of Rust 1.94.
 
 ## Working in this repository
 

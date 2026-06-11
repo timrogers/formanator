@@ -1,12 +1,16 @@
-//! LLM-powered inference for claim metadata. Supports both the OpenAI API and
-//! the GitHub Models inference endpoint via the `async-openai` crate, which
-//! speaks the OpenAI chat-completions protocol.
+//! LLM-powered inference for claim metadata. Supports three providers:
+//!
+//! 1. The OpenAI API and 2. the GitHub Models inference endpoint, both spoken
+//!    via the `async-openai` crate (the OpenAI chat-completions protocol).
+//! 3. The GitHub Copilot CLI, via the `github-copilot-sdk` crate. This is the
+//!    default when no OpenAI API key or GitHub token has been provided.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow, bail};
-use async_openai::Client;
+use async_openai::Client as OpenAiClient;
 use async_openai::config::OpenAIConfig;
 use async_openai::types::chat::{
     ChatCompletionRequestMessage, ChatCompletionRequestMessageContentPartImageArgs,
@@ -16,6 +20,8 @@ use async_openai::types::chat::{
 };
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
+use github_copilot_sdk::types::{Attachment, MessageOptions, SessionConfig};
+use github_copilot_sdk::{CliProgram, Client as CopilotClient, ClientOptions};
 use regex::Regex;
 use serde::Deserialize;
 
@@ -49,7 +55,7 @@ fn llm_api_base_override() -> Option<String> {
 
 /// Resolved configuration for an OpenAI-compatible API call.
 struct ApiConfig {
-    client: Client<OpenAIConfig>,
+    client: OpenAiClient<OpenAIConfig>,
     model: &'static str,
     api_base: String,
 }
@@ -70,6 +76,9 @@ fn resolve_api_config(
     let (base, key, model) = if let Some(key) = openai {
         (OPENAI_BASE, key, OPENAI_MODEL)
     } else if let Some(key) = github {
+        eprintln!(
+            "Warning: The GitHub Models provider is deprecated and may be removed in a future release. Consider switching to the GitHub Copilot CLI (the default, no extra configuration required) by unsetting GITHUB_MODELS_TOKEN, or use OpenAI by setting OPENAI_API_KEY or passing --openai-api-key."
+        );
         (GITHUB_MODELS_BASE, key, GITHUB_MODELS_MODEL)
     } else {
         bail!("You must either specify a GitHub token or an OpenAI API key.")
@@ -78,10 +87,41 @@ fn resolve_api_config(
     let base = llm_api_base_override().unwrap_or_else(|| base.to_string());
     let config = OpenAIConfig::new().with_api_base(&base).with_api_key(key);
     Ok(ApiConfig {
-        client: Client::with_config(config),
+        client: OpenAiClient::with_config(config),
         model,
         api_base: base,
     })
+}
+
+/// The inference backend selected for a request.
+enum Provider {
+    /// OpenAI or GitHub Models, spoken over the OpenAI chat-completions API.
+    OpenAiCompatible(Box<ApiConfig>),
+    /// The GitHub Copilot CLI, with an optional explicit path to the binary.
+    Copilot { cli_path: Option<PathBuf> },
+}
+
+/// Decide which inference provider to use. An OpenAI API key or GitHub token,
+/// when present, takes precedence (handled by [`resolve_api_config`]).
+/// Otherwise we fall back to the GitHub Copilot CLI.
+fn resolve_provider(
+    openai_api_key: Option<&str>,
+    github_token: Option<&str>,
+    copilot_cli_path: Option<&Path>,
+) -> Result<Provider> {
+    let has_openai = openai_api_key.is_some_and(|s| !s.is_empty());
+    let has_github = github_token.is_some_and(|s| !s.is_empty());
+
+    if has_openai || has_github {
+        Ok(Provider::OpenAiCompatible(Box::new(resolve_api_config(
+            openai_api_key,
+            github_token,
+        )?)))
+    } else {
+        Ok(Provider::Copilot {
+            cli_path: copilot_cli_path.map(Path::to_path_buf),
+        })
+    }
 }
 
 fn run_blocking<F: std::future::Future<Output = Result<String>>>(future: F) -> Result<String> {
@@ -152,6 +192,108 @@ async fn call_chat_completion(
         .ok_or_else(|| anyhow!("LLM returned an empty response."))
 }
 
+// ---------------------------------------------------------------------------
+// GitHub Copilot CLI inference
+// ---------------------------------------------------------------------------
+
+/// Search `PATH` for the `copilot` CLI binary. The SDK's auto-resolution does
+/// not scan `PATH` (only `COPILOT_CLI_PATH` and the bundled binary), so we do
+/// it ourselves to support a "just works" experience when the CLI is installed.
+fn detect_copilot_cli() -> Option<PathBuf> {
+    let names: &[&str] = if cfg!(windows) {
+        &["copilot.exe", "copilot"]
+    } else {
+        &["copilot"]
+    };
+    let path_var = std::env::var_os("PATH")?;
+    for dir in std::env::split_paths(&path_var) {
+        for name in names {
+            let candidate = dir.join(name);
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+    None
+}
+
+/// Run a single-shot prompt through the GitHub Copilot CLI and return the
+/// assistant's final text response. An optional base64-encoded image is sent
+/// as an attachment for vision inference.
+async fn copilot_complete(
+    cli_path: Option<&Path>,
+    prompt: String,
+    image: Option<(String, String)>,
+) -> Result<String> {
+    let program = match cli_path {
+        Some(path) => CliProgram::Path(path.to_path_buf()),
+        None => detect_copilot_cli().map_or(CliProgram::Resolve, CliProgram::Path),
+    };
+
+    if is_verbose() {
+        eprintln!("[verbose] > GitHub Copilot CLI inference (program: {program:?})");
+    }
+
+    let mut options = ClientOptions::default();
+    options.program = program;
+
+    let client = CopilotClient::start(options).await.context(
+        "Failed to start the GitHub Copilot CLI. Ensure the `copilot` CLI is installed and on your PATH, pass --copilot-cli-path, or set COPILOT_CLI_PATH.",
+    )?;
+
+    let result = copilot_run_session(&client, prompt, image).await;
+
+    // Always attempt to shut the CLI process down cleanly, regardless of
+    // whether the request succeeded.
+    let _ = client.stop().await;
+
+    result
+}
+
+async fn copilot_run_session(
+    client: &CopilotClient,
+    prompt: String,
+    image: Option<(String, String)>,
+) -> Result<String> {
+    let session = client
+        .create_session(SessionConfig::default().approve_all_permissions())
+        .await
+        .context("Failed to create a GitHub Copilot session")?;
+
+    let message = MessageOptions::new(prompt).with_wait_timeout(Duration::from_secs(120));
+    let message = match image {
+        Some((data, mime_type)) => message.with_attachments(vec![Attachment::Blob {
+            data,
+            mime_type,
+            display_name: Some("receipt".to_string()),
+        }]),
+        None => message,
+    };
+
+    let event = session
+        .send_and_wait(message)
+        .await
+        .context("The GitHub Copilot inference request failed")?;
+
+    let _ = session.disconnect().await;
+
+    let response = event
+        .and_then(|e| {
+            e.data
+                .get("content")
+                .and_then(|c| c.as_str())
+                .map(str::to_string)
+        })
+        .filter(|s| !s.trim().is_empty())
+        .ok_or_else(|| anyhow!("GitHub Copilot returned an empty response."))?;
+
+    if is_verbose() {
+        eprintln!("[verbose] < GitHub Copilot response: {response}");
+    }
+
+    Ok(response)
+}
+
 fn user_text_message(text: String) -> Result<ChatCompletionRequestMessage> {
     let message = ChatCompletionRequestUserMessageArgs::default()
         .content(ChatCompletionRequestUserMessageContent::Text(text))
@@ -205,8 +347,9 @@ pub fn infer_category_and_benefit(
     benefits_with_categories: &[BenefitWithCategories],
     openai_api_key: Option<&str>,
     github_token: Option<&str>,
+    copilot_cli_path: Option<&Path>,
 ) -> Result<InferredCategoryAndBenefit> {
-    let config = resolve_api_config(openai_api_key, github_token)?;
+    let provider = resolve_provider(openai_api_key, github_token, copilot_cli_path)?;
 
     let valid_categories: Vec<String> = benefits_with_categories
         .iter()
@@ -226,8 +369,15 @@ pub fn infer_category_and_benefit(
         description,
     );
 
-    let messages = vec![user_text_message(prompt)?];
-    let response = run_blocking(call_chat_completion(&config, messages))?;
+    let response = match &provider {
+        Provider::OpenAiCompatible(config) => {
+            let messages = vec![user_text_message(prompt)?];
+            run_blocking(call_chat_completion(config, messages))?
+        }
+        Provider::Copilot { cli_path } => {
+            run_blocking(copilot_complete(cli_path.as_deref(), prompt, None))?
+        }
+    };
     let trimmed = response.trim().to_string();
 
     // Find the matching category to derive the benefit name.
@@ -279,17 +429,18 @@ pub fn infer_all_from_receipt(
     benefits_with_categories: &[BenefitWithCategories],
     openai_api_key: Option<&str>,
     github_token: Option<&str>,
+    copilot_cli_path: Option<&Path>,
 ) -> Result<ReceiptInferenceResult> {
-    let config = resolve_api_config(openai_api_key, github_token)?;
+    let provider = resolve_provider(openai_api_key, github_token, copilot_cli_path)?;
 
     let image_path = convert_to_image_if_needed(receipt_path)?;
     let image_b64 = encode_image_to_base64(&image_path)?;
+    let mime_type = image_mime_type(&image_path);
     // If we converted the receipt to a temporary JPEG, remove it now that
     // it's been encoded so we don't leak files into the temp directory.
     if image_path != receipt_path {
         let _ = std::fs::remove_file(&image_path);
     }
-    let data_url = format!("data:image/jpeg;base64,{image_b64}");
 
     let valid_categories: Vec<String> = benefits_with_categories
         .iter()
@@ -321,8 +472,18 @@ pub fn infer_all_from_receipt(
         "Your job is to analyze a receipt image and extract ALL required information for an expense claim. You must return a JSON object with the following fields:\n\n- amount: The total amount (e.g., \"25.99\")\n- merchant: The name of the merchant/store\n- purchaseDate: The date in YYYY-MM-DD format\n- description: A brief description of what was purchased\n- benefit: The most appropriate benefit category from the valid benefits list. Only benefits from the provided list are valid.\n- category: The most appropriate category from the valid categories list. Only categories from the provided list are valid.\n\nValid benefits:\n{valid_benefits_list}\n\nValid categories:\n{valid_categories_list}\n\nReturn ONLY a valid JSON object with these exact field names. Do not include any other text or formatting. Do not wrap the JSON object in a markdown code block syntax.",
     );
 
-    let messages = vec![user_text_and_image_message(prompt, data_url)?];
-    let raw = run_blocking(call_chat_completion(&config, messages))?;
+    let raw = match &provider {
+        Provider::OpenAiCompatible(config) => {
+            let data_url = format!("data:{mime_type};base64,{image_b64}");
+            let messages = vec![user_text_and_image_message(prompt, data_url)?];
+            run_blocking(call_chat_completion(config, messages))?
+        }
+        Provider::Copilot { cli_path } => run_blocking(copilot_complete(
+            cli_path.as_deref(),
+            prompt,
+            Some((image_b64, mime_type)),
+        ))?,
+    };
 
     // Strip markdown code fences if the model added them despite the prompt.
     let cleaned = raw
@@ -455,4 +616,22 @@ fn encode_image_to_base64(path: &Path) -> Result<String> {
     let bytes = std::fs::read(path)
         .with_context(|| format!("Failed to read image file at {}", path.display()))?;
     Ok(BASE64.encode(bytes))
+}
+
+/// Best-effort MIME type for an image based on its file extension, defaulting
+/// to `image/jpeg` (PDF receipts are converted to JPEG before this is called).
+fn image_mime_type(path: &Path) -> String {
+    match path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
+        Some("png") => "image/png",
+        Some("heic") => "image/heic",
+        Some("webp") => "image/webp",
+        Some("gif") => "image/gif",
+        _ => "image/jpeg",
+    }
+    .to_string()
 }

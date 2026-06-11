@@ -69,12 +69,13 @@ Once a day, Formanator checks GitHub for a newer release. When one is available,
 
 ### Configuring an LLM provider (optional, but recommended)
 
-When submitting a claim you can either provide every detail manually or let an LLM infer them. Two providers are supported:
+When submitting a claim you can either provide every detail manually or let an LLM infer them. Three providers are supported:
 
-- **GitHub Models** — free, with a generous quota. Set the `GITHUB_TOKEN` environment variable to a GitHub Personal Access Token with **read access to GitHub Models**, or pass `--github-token`.
+- **GitHub Copilot CLI** — _the default._ If you don't configure OpenAI or GitHub Models, Formanator uses the [GitHub Copilot CLI](https://github.com/features/copilot/cli) for inference. Formanator detects the `copilot` binary on your `PATH` automatically; if it lives elsewhere, set the `COPILOT_CLI_PATH` environment variable or pass `--copilot-cli-path` with the path to the binary.
 - **OpenAI** — billed to your OpenAI account. Set the `OPENAI_API_KEY` environment variable, or pass `--openai-api-key`.
+- **GitHub Models** — _deprecated; may be removed in a future release._ Free, with a generous quota. Set the `GITHUB_MODELS_TOKEN` environment variable to a GitHub Personal Access Token with **read access to GitHub Models**, or pass `--github-models-token`. When this provider is used, Formanator prints a deprecation warning to stderr.
 
-If both are configured, Formanator prefers OpenAI.
+If multiple are configured, Formanator prefers OpenAI, then GitHub Models, and otherwise falls back to the GitHub Copilot CLI.
 
 ### Submitting claims in bulk
 
