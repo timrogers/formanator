@@ -152,13 +152,16 @@ Formanator can run as an MCP server over stdio so AI assistants can interact wit
 }
 ```
 
-The server exposes three tools:
+The server exposes six tools:
 
+- `auth_status` — check whether Formanator is logged in to Forma.
+- `login_start` — request a Forma magic link by email.
+- `login_complete` — complete login by pasting the emailed magic link.
 - `list_benefits_with_categories` — list all benefits with their categories and remaining balances.
 - `list_claims` — list claims, with optional filtering (currently only `in_progress`).
 - `create_claim` — create a new claim.
 
-You must be logged in (`formanator login`) before starting the MCP server.
+If you are not already logged in, use `login_start` and `login_complete` from your MCP client. You can still log in ahead of time with `formanator login`.
 
 To build a binary without MCP support (smaller binary, fewer dependencies):
 
