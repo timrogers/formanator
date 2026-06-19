@@ -69,7 +69,7 @@ Once a day, Formanator checks GitHub for a newer release. When one is available,
 
 ### Configuring an LLM provider (optional, but recommended)
 
-When submitting a claim you can either provide every detail manually or let an LLM infer them. Three providers are supported:
+When submitting a claim you can either provide every detail manually or let an LLM infer them. Two providers are supported:
 
 - **GitHub Copilot CLI** — _the default._ If you don't configure OpenAI, Formanator uses the [GitHub Copilot CLI](https://github.com/features/copilot/cli) for inference. Formanator detects the `copilot` binary on your `PATH` automatically; if it lives elsewhere, set the `COPILOT_CLI_PATH` environment variable or pass `--copilot-cli-path` with the path to the binary.
 - **OpenAI** — billed to your OpenAI account. Set the `OPENAI_API_KEY` environment variable, or pass `--openai-api-key`.
