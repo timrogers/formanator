@@ -32,7 +32,7 @@ const OPENAI_BASE: &str = "https://api.openai.com/v1";
 const OPENAI_MODEL: &str = "gpt-4o";
 
 // Base-URL override for the LLM API. Production code never sets this; the
-// integration tests in `tests/llm_api.rs` and `tests/cli.rs` use it to point
+// integration tests in `tests/llm_api.rs` use it to point
 // the OpenAI-compatible client at a local mock HTTP server instead of the
 // real OpenAI endpoint.
 static LLM_API_BASE: std::sync::RwLock<Option<String>> = std::sync::RwLock::new(None);
