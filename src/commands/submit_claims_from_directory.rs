@@ -143,7 +143,6 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
                 receipt_file,
                 &benefits,
                 args.openai_api_key.as_deref(),
-                args.github_models_token.as_deref(),
                 args.copilot_cli_path.as_deref(),
             )?;
 

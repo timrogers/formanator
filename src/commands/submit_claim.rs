@@ -22,7 +22,6 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         description,
         receipt_path,
         openai_api_key,
-        github_models_token,
         copilot_cli_path,
         dry_run,
         verbose: _,
@@ -81,14 +80,13 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
             create_claim(&opts)?;
         }
     } else if !has_some_manual {
-        // Full receipt inference mode. Uses OpenAI/GitHub Models when a key is
-        // provided, otherwise falls back to the GitHub Copilot CLI.
+        // Full receipt inference mode. Uses OpenAI when a key is provided,
+        // otherwise falls back to the GitHub Copilot CLI.
         let benefits = get_benefits_with_categories(&access_token)?;
         let inferred = infer_all_from_receipt(
             &receipt_path[0],
             &benefits,
             openai_api_key.as_deref(),
-            github_models_token.as_deref(),
             copilot_cli_path.as_deref(),
         )?;
 
@@ -129,15 +127,14 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         amount.clone(),
         purchase_date.clone(),
     ) {
-        // Legacy mode: infer benefit and category only. Uses OpenAI/GitHub
-        // Models when a key is provided, otherwise the GitHub Copilot CLI.
+        // Legacy mode: infer benefit and category only. Uses OpenAI when a
+        // key is provided, otherwise the GitHub Copilot CLI.
         let benefits = get_benefits_with_categories(&access_token)?;
         let inferred = infer_category_and_benefit(
             &merchant,
             &description,
             &benefits,
             openai_api_key.as_deref(),
-            github_models_token.as_deref(),
             copilot_cli_path.as_deref(),
         )?;
 
@@ -165,7 +162,7 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         }
     } else {
         bail!(
-            "You must either provide all claim details (--benefit, --category, --amount, --merchant, --purchase-date, --description), or provide either: (1) just a receipt for full inference, or (2) all details except --benefit and --category to infer them. Inference uses the GitHub Copilot CLI by default, or OpenAI / GitHub Models if --openai-api-key / --github-models-token is set."
+            "You must either provide all claim details (--benefit, --category, --amount, --merchant, --purchase-date, --description), or provide either: (1) just a receipt for full inference, or (2) all details except --benefit and --category to infer them. Inference uses the GitHub Copilot CLI by default, or OpenAI if --openai-api-key is set."
         );
     }
 

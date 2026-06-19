@@ -10,7 +10,7 @@ use clap::{Parser, Subcommand};
     name = "formanator",
     version,
     about = "Submit Forma <https://joinforma.com> benefit claims from the command line.",
-    long_about = "Submit Forma <https://joinforma.com> benefit claims from the command line.\n\nSupports automatic inference of claim details from receipts via OpenAI or GitHub Models."
+    long_about = "Submit Forma <https://joinforma.com> benefit claims from the command line.\n\nSupports automatic inference of claim details from receipts via OpenAI or the GitHub Copilot CLI."
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -117,10 +117,7 @@ pub struct SubmitClaimArgs {
     /// OpenAI API key used to infer claim details. Defaults to the `OPENAI_API_KEY` environment variable.
     #[arg(long, env = "OPENAI_API_KEY")]
     pub openai_api_key: Option<String>,
-    /// GitHub Models token used to infer claim details via GitHub Models. Defaults to the `GITHUB_MODELS_TOKEN` environment variable. Deprecated: prefer --openai-api-key.
-    #[arg(long, env = "GITHUB_MODELS_TOKEN")]
-    pub github_models_token: Option<String>,
-    /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key or GitHub token is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
+    /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
     #[arg(long, env = "COPILOT_CLI_PATH")]
     pub copilot_cli_path: Option<PathBuf>,
     /// Run through the entire flow without actually submitting the claim.
@@ -149,10 +146,7 @@ pub struct SubmitClaimsFromCsvArgs {
     /// OpenAI API key used to infer claim details for rows that leave columns blank.
     #[arg(long, env = "OPENAI_API_KEY")]
     pub openai_api_key: Option<String>,
-    /// GitHub Models token used to infer claim details via GitHub Models. Defaults to the `GITHUB_MODELS_TOKEN` environment variable. Deprecated: prefer --openai-api-key.
-    #[arg(long, env = "GITHUB_MODELS_TOKEN")]
-    pub github_models_token: Option<String>,
-    /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key or GitHub token is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
+    /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
     #[arg(long, env = "COPILOT_CLI_PATH")]
     pub copilot_cli_path: Option<PathBuf>,
     /// Run through the entire flow without actually submitting the claims.
@@ -177,10 +171,7 @@ pub struct SubmitClaimsFromDirectoryArgs {
     /// OpenAI API key used to infer claim details from receipts.
     #[arg(long, env = "OPENAI_API_KEY")]
     pub openai_api_key: Option<String>,
-    /// GitHub Models token used to infer claim details via GitHub Models. Defaults to the `GITHUB_MODELS_TOKEN` environment variable. Deprecated: prefer --openai-api-key.
-    #[arg(long, env = "GITHUB_MODELS_TOKEN")]
-    pub github_models_token: Option<String>,
-    /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key or GitHub token is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
+    /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
     #[arg(long, env = "COPILOT_CLI_PATH")]
     pub copilot_cli_path: Option<PathBuf>,
     /// Run through the entire flow without actually submitting the claims.

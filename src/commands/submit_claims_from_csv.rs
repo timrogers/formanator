@@ -61,7 +61,6 @@ pub fn run(args: SubmitClaimsFromCsvArgs) -> Result<()> {
                     &claim.receipt_path[0],
                     &benefits,
                     args.openai_api_key.as_deref(),
-                    args.github_models_token.as_deref(),
                     args.copilot_cli_path.as_deref(),
                 )?;
                 println!("Inferred amount: {}", inferred.amount);
@@ -89,7 +88,6 @@ pub fn run(args: SubmitClaimsFromCsvArgs) -> Result<()> {
                     &claim.description,
                     &benefits,
                     args.openai_api_key.as_deref(),
-                    args.github_models_token.as_deref(),
                     args.copilot_cli_path.as_deref(),
                 )?;
                 claim.benefit = inferred.benefit;

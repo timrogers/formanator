@@ -1,9 +1,9 @@
-//! LLM-powered inference for claim metadata. Supports three providers:
+//! LLM-powered inference for claim metadata. Supports two providers:
 //!
-//! 1. The OpenAI API and 2. the GitHub Models inference endpoint, both spoken
-//!    via the `async-openai` crate (the OpenAI chat-completions protocol).
-//! 3. The GitHub Copilot CLI, via the `github-copilot-sdk` crate. This is the
-//!    default when no OpenAI API key or GitHub token has been provided.
+//! 1. The OpenAI API, spoken via the `async-openai` crate (the OpenAI
+//!    chat-completions protocol).
+//! 2. The GitHub Copilot CLI, via the `github-copilot-sdk` crate. This is the
+//!    default when no OpenAI API key has been provided.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -30,13 +30,11 @@ use crate::verbose::is_enabled as is_verbose;
 
 const OPENAI_BASE: &str = "https://api.openai.com/v1";
 const OPENAI_MODEL: &str = "gpt-4o";
-const GITHUB_MODELS_BASE: &str = "https://models.github.ai/inference";
-const GITHUB_MODELS_MODEL: &str = "openai/gpt-4.1";
 
 // Base-URL override for the LLM API. Production code never sets this; the
-// integration tests in `tests/llm_api.rs` and `tests/cli.rs` use it to point
+// integration tests in `tests/llm_api.rs` use it to point
 // the OpenAI-compatible client at a local mock HTTP server instead of the
-// real OpenAI / GitHub Models endpoints.
+// real OpenAI endpoint.
 static LLM_API_BASE: std::sync::RwLock<Option<String>> = std::sync::RwLock::new(None);
 
 /// Override the LLM API base URL used for OpenAI-compatible chat-completions
@@ -60,28 +58,13 @@ struct ApiConfig {
     api_base: String,
 }
 
-fn resolve_api_config(
-    openai_api_key: Option<&str>,
-    github_token: Option<&str>,
-) -> Result<ApiConfig> {
+fn resolve_api_config(openai_api_key: Option<&str>) -> Result<ApiConfig> {
     let openai = openai_api_key.filter(|s| !s.is_empty());
-    let github = github_token.filter(|s| !s.is_empty());
-
-    if openai.is_some() && github.is_some() {
-        eprintln!(
-            "Warning: You have provided both an OpenAI API key and a GitHub token. Defaulting to using OpenAI."
-        );
-    }
 
     let (base, key, model) = if let Some(key) = openai {
         (OPENAI_BASE, key, OPENAI_MODEL)
-    } else if let Some(key) = github {
-        eprintln!(
-            "Warning: The GitHub Models provider is deprecated and may be removed in a future release. Consider switching to the GitHub Copilot CLI (the default, no extra configuration required) by unsetting GITHUB_MODELS_TOKEN, or use OpenAI by setting OPENAI_API_KEY or passing --openai-api-key."
-        );
-        (GITHUB_MODELS_BASE, key, GITHUB_MODELS_MODEL)
     } else {
-        bail!("You must either specify a GitHub token or an OpenAI API key.")
+        bail!("You must specify an OpenAI API key.")
     };
 
     let base = llm_api_base_override().unwrap_or_else(|| base.to_string());
@@ -95,27 +78,24 @@ fn resolve_api_config(
 
 /// The inference backend selected for a request.
 enum Provider {
-    /// OpenAI or GitHub Models, spoken over the OpenAI chat-completions API.
+    /// OpenAI, spoken over the OpenAI chat-completions API.
     OpenAiCompatible(Box<ApiConfig>),
     /// The GitHub Copilot CLI, with an optional explicit path to the binary.
     Copilot { cli_path: Option<PathBuf> },
 }
 
-/// Decide which inference provider to use. An OpenAI API key or GitHub token,
-/// when present, takes precedence (handled by [`resolve_api_config`]).
-/// Otherwise we fall back to the GitHub Copilot CLI.
+/// Decide which inference provider to use. An OpenAI API key, when present,
+/// takes precedence (handled by [`resolve_api_config`]). Otherwise we fall
+/// back to the GitHub Copilot CLI.
 fn resolve_provider(
     openai_api_key: Option<&str>,
-    github_token: Option<&str>,
     copilot_cli_path: Option<&Path>,
 ) -> Result<Provider> {
     let has_openai = openai_api_key.is_some_and(|s| !s.is_empty());
-    let has_github = github_token.is_some_and(|s| !s.is_empty());
 
-    if has_openai || has_github {
+    if has_openai {
         Ok(Provider::OpenAiCompatible(Box::new(resolve_api_config(
             openai_api_key,
-            github_token,
         )?)))
     } else {
         Ok(Provider::Copilot {
@@ -346,10 +326,9 @@ pub fn infer_category_and_benefit(
     description: &str,
     benefits_with_categories: &[BenefitWithCategories],
     openai_api_key: Option<&str>,
-    github_token: Option<&str>,
     copilot_cli_path: Option<&Path>,
 ) -> Result<InferredCategoryAndBenefit> {
-    let provider = resolve_provider(openai_api_key, github_token, copilot_cli_path)?;
+    let provider = resolve_provider(openai_api_key, copilot_cli_path)?;
 
     let valid_categories: Vec<String> = benefits_with_categories
         .iter()
@@ -428,10 +407,9 @@ pub fn infer_all_from_receipt(
     receipt_path: &Path,
     benefits_with_categories: &[BenefitWithCategories],
     openai_api_key: Option<&str>,
-    github_token: Option<&str>,
     copilot_cli_path: Option<&Path>,
 ) -> Result<ReceiptInferenceResult> {
-    let provider = resolve_provider(openai_api_key, github_token, copilot_cli_path)?;
+    let provider = resolve_provider(openai_api_key, copilot_cli_path)?;
 
     let image_path = convert_to_image_if_needed(receipt_path)?;
     let image_b64 = encode_image_to_base64(&image_path)?;

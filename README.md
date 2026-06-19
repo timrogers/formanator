@@ -8,7 +8,7 @@ Formanator allows you to:
 * **Submit benefit claims to [Forma](https://www.joinforma.com/) and track progress from the command line**, either one-by-one or in bulk
 * **Understand your Forma benefits and track and submit claims from any Model Context Protocol (MCP) client**, for example [Copilot CLI](https://github.com/features/copilot/cli), [Visual Studio Code](https://code.visualstudio.com/) or [Claude Code](https://code.claude.com/docs/en/overview)
 
-With the power of large language models 🧠👀 - free of charge thanks to [GitHub Models](https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models) - it can even **analyse your receipts and generate your claims automatically**.
+With the power of large language models 🧠👀 - via the [GitHub Copilot CLI](https://github.com/features/copilot/cli) (free, no extra configuration needed) or [OpenAI](https://openai.com/) - it can even **analyse your receipts and generate your claims automatically**.
 
 ![Screenshot of running `formanator` from a terminal](https://github.com/user-attachments/assets/e053efc8-f4cb-4ea1-8850-6c82d668bf29)
 
@@ -69,13 +69,12 @@ Once a day, Formanator checks GitHub for a newer release. When one is available,
 
 ### Configuring an LLM provider (optional, but recommended)
 
-When submitting a claim you can either provide every detail manually or let an LLM infer them. Three providers are supported:
+When submitting a claim you can either provide every detail manually or let an LLM infer them. Two providers are supported:
 
-- **GitHub Copilot CLI** — _the default._ If you don't configure OpenAI or GitHub Models, Formanator uses the [GitHub Copilot CLI](https://github.com/features/copilot/cli) for inference. Formanator detects the `copilot` binary on your `PATH` automatically; if it lives elsewhere, set the `COPILOT_CLI_PATH` environment variable or pass `--copilot-cli-path` with the path to the binary.
+- **GitHub Copilot CLI** — _the default._ If you don't configure OpenAI, Formanator uses the [GitHub Copilot CLI](https://github.com/features/copilot/cli) for inference. Formanator detects the `copilot` binary on your `PATH` automatically; if it lives elsewhere, set the `COPILOT_CLI_PATH` environment variable or pass `--copilot-cli-path` with the path to the binary.
 - **OpenAI** — billed to your OpenAI account. Set the `OPENAI_API_KEY` environment variable, or pass `--openai-api-key`.
-- **GitHub Models** — _deprecated; may be removed in a future release._ Free, with a generous quota. Set the `GITHUB_MODELS_TOKEN` environment variable to a GitHub Personal Access Token with **read access to GitHub Models**, or pass `--github-models-token`. When this provider is used, Formanator prints a deprecation warning to stderr.
 
-If multiple are configured, Formanator prefers OpenAI, then GitHub Models, and otherwise falls back to the GitHub Copilot CLI.
+If both are configured, Formanator prefers OpenAI and otherwise falls back to the GitHub Copilot CLI.
 
 ### Submitting claims in bulk
 
