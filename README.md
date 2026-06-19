@@ -76,6 +76,11 @@ When submitting a claim you can either provide every detail manually or let an L
 
 If both are configured, Formanator prefers OpenAI and otherwise falls back to the GitHub Copilot CLI.
 
+By default the OpenAI backend talks to OpenAI's API (`https://api.openai.com/v1`) using the `gpt-4o` model. You can point it at any OpenAI-compatible API (for example Azure OpenAI, OpenRouter or a local server) and choose a different model:
+
+- Set the base URL with the `OPENAI_BASE_URL` environment variable or `--openai-base-url`.
+- Set the model with the `OPENAI_MODEL` environment variable or `--openai-model`.
+
 ### Submitting claims in bulk
 
 #### Automatically submitting all receipts in a directory (recommended)

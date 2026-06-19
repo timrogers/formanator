@@ -2,17 +2,14 @@
 //!
 //! These tests drive the LLM inference entry points against a local mock
 //! HTTP server (via [`httpmock`]) that impersonates the OpenAI-compatible
-//! `/chat/completions` endpoint. The real LLM base URL is overridden via
-//! [`formanator::llm::set_llm_api_base`] for the duration of each test, so
-//! no real network requests are ever made.
-//!
-//! The tests are serialised because they share a process-global LLM API
-//! base URL override.
+//! `/chat/completions` endpoint. Each test points the client at the mock
+//! server through [`formanator::llm::LlmOptions::openai_base_url`], so no real
+//! network requests are ever made.
 
 use std::io::Write;
 
 use formanator::forma::{Benefit, BenefitWithCategories, Category};
-use formanator::llm::{infer_all_from_receipt, infer_category_and_benefit, set_llm_api_base};
+use formanator::llm::{LlmOptions, infer_all_from_receipt, infer_category_and_benefit};
 use httpmock::prelude::*;
 use serial_test::serial;
 
@@ -20,27 +17,14 @@ use serial_test::serial;
 mod common;
 use common::fixture;
 
-/// RAII guard that sets the LLM API base for the duration of a test and
-/// clears it when dropped.
-struct LlmBaseGuard;
-
-impl LlmBaseGuard {
-    fn new(base: &str) -> Self {
-        set_llm_api_base(Some(base.to_string()));
-        Self
+/// Build [`LlmOptions`] that use the OpenAI-compatible backend with a test API
+/// key, pointed at the given mock-server base URL.
+fn openai_options(base_url: &str) -> LlmOptions<'_> {
+    LlmOptions {
+        openai_api_key: Some("test-openai-key"),
+        openai_base_url: Some(base_url),
+        ..Default::default()
     }
-}
-
-impl Drop for LlmBaseGuard {
-    fn drop(&mut self) {
-        set_llm_api_base(None);
-    }
-}
-
-fn llm_server() -> (MockServer, LlmBaseGuard) {
-    let server = MockServer::start();
-    let guard = LlmBaseGuard::new(&server.base_url());
-    (server, guard)
 }
 
 /// A minimal valid-looking JPEG file at a fixed path. Returned as a
@@ -128,7 +112,7 @@ fn fixture_benefits_with_categories() -> Vec<BenefitWithCategories> {
 #[test]
 #[serial]
 fn infer_category_and_benefit_resolves_llm_response_to_benefit() {
-    let (server, _guard) = llm_server();
+    let server = MockServer::start();
     let mock = server.mock(|when, then| {
         when.method(POST)
             .path("/chat/completions")
@@ -143,8 +127,7 @@ fn infer_category_and_benefit_resolves_llm_response_to_benefit() {
         "Open University",
         "MBA tuition fee",
         &bwcs,
-        Some("test-openai-key"),
-        None,
+        &openai_options(&server.base_url()),
     )
     .expect("infer_category_and_benefit should succeed");
 
@@ -158,7 +141,7 @@ fn infer_category_and_benefit_resolves_llm_response_to_benefit() {
 #[test]
 #[serial]
 fn infer_category_and_benefit_errors_when_llm_returns_unknown_category() {
-    let (server, _guard) = llm_server();
+    let server = MockServer::start();
     // Build a chat-completion response whose `content` is not in the
     // category list we pass in.
     let body = serde_json::json!({
@@ -186,8 +169,7 @@ fn infer_category_and_benefit_errors_when_llm_returns_unknown_category() {
         "Merchant",
         "Description",
         &bwcs,
-        Some("test-openai-key"),
-        None,
+        &openai_options(&server.base_url()),
     )
     .expect_err("should reject unknown category");
     assert!(
@@ -203,7 +185,7 @@ fn infer_category_and_benefit_errors_when_llm_returns_unknown_category() {
 #[test]
 #[serial]
 fn infer_all_from_receipt_parses_structured_json_response() {
-    let (server, _guard) = llm_server();
+    let server = MockServer::start();
     let mock = server.mock(|when, then| {
         when.method(POST)
             .path("/chat/completions")
@@ -215,7 +197,7 @@ fn infer_all_from_receipt_parses_structured_json_response() {
 
     let receipt = fake_jpeg_receipt();
     let bwcs = fixture_benefits_with_categories();
-    let result = infer_all_from_receipt(receipt.path(), &bwcs, Some("test-openai-key"), None)
+    let result = infer_all_from_receipt(receipt.path(), &bwcs, &openai_options(&server.base_url()))
         .expect("infer_all_from_receipt should succeed");
 
     mock.assert();
@@ -233,7 +215,7 @@ fn infer_all_from_receipt_parses_structured_json_response() {
 #[test]
 #[serial]
 fn infer_all_from_receipt_rejects_invalid_date_format() {
-    let (server, _guard) = llm_server();
+    let server = MockServer::start();
     // The model returns a JSON payload whose shape is valid but whose
     // `purchaseDate` is not YYYY-MM-DD. The validator must reject it.
     let inner = serde_json::json!({
@@ -265,7 +247,7 @@ fn infer_all_from_receipt_rejects_invalid_date_format() {
 
     let receipt = fake_jpeg_receipt();
     let bwcs = fixture_benefits_with_categories();
-    let err = infer_all_from_receipt(receipt.path(), &bwcs, Some("test-openai-key"), None)
+    let err = infer_all_from_receipt(receipt.path(), &bwcs, &openai_options(&server.base_url()))
         .expect_err("should reject bad date");
     assert!(format!("{err}").contains("invalid date format"), "{err}");
 }
@@ -275,7 +257,7 @@ fn infer_all_from_receipt_rejects_invalid_date_format() {
 fn infer_all_from_receipt_strips_markdown_code_fences() {
     // Some models wrap the JSON in ```json ... ``` despite the prompt.
     // The parser is expected to strip those fences.
-    let (server, _guard) = llm_server();
+    let server = MockServer::start();
     let inner = "```json\n{\n  \"amount\": \"42.00\",\n  \"merchant\": \"Open University\",\n  \"purchaseDate\": \"2026-01-15\",\n  \"description\": \"Course fee\",\n  \"benefit\": \"Flexible Reimbursement Account\",\n  \"category\": \"University Program\"\n}\n```";
     let body = serde_json::json!({
         "id": "chatcmpl-test-fenced",
@@ -297,7 +279,7 @@ fn infer_all_from_receipt_strips_markdown_code_fences() {
 
     let receipt = fake_jpeg_receipt();
     let bwcs = fixture_benefits_with_categories();
-    let result = infer_all_from_receipt(receipt.path(), &bwcs, Some("test-openai-key"), None)
+    let result = infer_all_from_receipt(receipt.path(), &bwcs, &openai_options(&server.base_url()))
         .expect("should parse fenced JSON");
     assert_eq!(result.amount, "42.00");
     assert_eq!(result.category, "University Program");
@@ -316,7 +298,11 @@ fn infer_category_and_benefit_falls_back_to_copilot_and_fails_with_bogus_cli_pat
     // where a real `copilot` binary is on PATH.
     let bwcs = fixture_benefits_with_categories();
     let bogus = std::path::Path::new("/no/such/copilot-cli-binary");
-    let err = infer_category_and_benefit("m", "d", &bwcs, None, Some(bogus))
+    let options = LlmOptions {
+        copilot_cli_path: Some(bogus),
+        ..Default::default()
+    };
+    let err = infer_category_and_benefit("m", "d", &bwcs, &options)
         .expect_err("should fail to launch the bogus Copilot CLI");
     // Just assert that an error was produced; the exact message comes from the
     // SDK / OS and is not stable across platforms.

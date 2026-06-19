@@ -28,46 +28,59 @@ use serde::Deserialize;
 use crate::forma::BenefitWithCategories;
 use crate::verbose::is_enabled as is_verbose;
 
+/// Default OpenAI API base URL, used when no override is supplied.
 const OPENAI_BASE: &str = "https://api.openai.com/v1";
+/// Default chat-completions model, used when no override is supplied.
 const OPENAI_MODEL: &str = "gpt-4o";
 
-// Base-URL override for the LLM API. Production code never sets this; the
-// integration tests in `tests/llm_api.rs` use it to point
-// the OpenAI-compatible client at a local mock HTTP server instead of the
-// real OpenAI endpoint.
-static LLM_API_BASE: std::sync::RwLock<Option<String>> = std::sync::RwLock::new(None);
-
-/// Override the LLM API base URL used for OpenAI-compatible chat-completions
-/// calls. Passing `None` clears any previous override. This is exposed
-/// publicly so that integration tests can call it; production code should
-/// never do so.
-pub fn set_llm_api_base(base: Option<String>) {
-    if let Ok(mut guard) = LLM_API_BASE.write() {
-        *guard = base;
-    }
-}
-
-fn llm_api_base_override() -> Option<String> {
-    LLM_API_BASE.read().ok().and_then(|g| g.clone())
+/// User-configurable options controlling LLM inference: which backend to use
+/// and, for the OpenAI-compatible backend, the base URL and model.
+///
+/// The OpenAI-compatible backend is selected when [`LlmOptions::openai_api_key`]
+/// is present and non-empty; otherwise inference falls back to the GitHub
+/// Copilot CLI. The base URL and model overrides make it possible to talk to
+/// any OpenAI-compatible provider (e.g. Azure OpenAI, OpenRouter or a local
+/// server), and let the integration tests point the client at a mock server.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct LlmOptions<'a> {
+    /// OpenAI API key. When present and non-empty, the OpenAI-compatible
+    /// backend is used; otherwise inference falls back to the Copilot CLI.
+    pub openai_api_key: Option<&'a str>,
+    /// Override for the OpenAI-compatible API base URL. Defaults to
+    /// [`OPENAI_BASE`].
+    pub openai_base_url: Option<&'a str>,
+    /// Override for the chat-completions model name. Defaults to
+    /// [`OPENAI_MODEL`].
+    pub openai_model: Option<&'a str>,
+    /// Explicit path to the GitHub Copilot CLI binary. When `None`, the binary
+    /// is auto-detected on `PATH`.
+    pub copilot_cli_path: Option<&'a Path>,
 }
 
 /// Resolved configuration for an OpenAI-compatible API call.
 struct ApiConfig {
     client: OpenAiClient<OpenAIConfig>,
-    model: &'static str,
+    model: String,
     api_base: String,
 }
 
-fn resolve_api_config(openai_api_key: Option<&str>) -> Result<ApiConfig> {
-    let openai = openai_api_key.filter(|s| !s.is_empty());
-
-    let (base, key, model) = if let Some(key) = openai {
-        (OPENAI_BASE, key, OPENAI_MODEL)
-    } else {
-        bail!("You must specify an OpenAI API key.")
+fn resolve_api_config(options: &LlmOptions) -> Result<ApiConfig> {
+    let key = match options.openai_api_key.filter(|s| !s.is_empty()) {
+        Some(key) => key,
+        None => bail!("You must specify an OpenAI API key."),
     };
 
-    let base = llm_api_base_override().unwrap_or_else(|| base.to_string());
+    let base = options
+        .openai_base_url
+        .filter(|s| !s.is_empty())
+        .unwrap_or(OPENAI_BASE)
+        .to_string();
+    let model = options
+        .openai_model
+        .filter(|s| !s.is_empty())
+        .unwrap_or(OPENAI_MODEL)
+        .to_string();
+
     let config = OpenAIConfig::new().with_api_base(&base).with_api_key(key);
     Ok(ApiConfig {
         client: OpenAiClient::with_config(config),
@@ -87,19 +100,16 @@ enum Provider {
 /// Decide which inference provider to use. An OpenAI API key, when present,
 /// takes precedence (handled by [`resolve_api_config`]). Otherwise we fall
 /// back to the GitHub Copilot CLI.
-fn resolve_provider(
-    openai_api_key: Option<&str>,
-    copilot_cli_path: Option<&Path>,
-) -> Result<Provider> {
-    let has_openai = openai_api_key.is_some_and(|s| !s.is_empty());
+fn resolve_provider(options: &LlmOptions) -> Result<Provider> {
+    let has_openai = options.openai_api_key.is_some_and(|s| !s.is_empty());
 
     if has_openai {
         Ok(Provider::OpenAiCompatible(Box::new(resolve_api_config(
-            openai_api_key,
+            options,
         )?)))
     } else {
         Ok(Provider::Copilot {
-            cli_path: copilot_cli_path.map(Path::to_path_buf),
+            cli_path: options.copilot_cli_path.map(Path::to_path_buf),
         })
     }
 }
@@ -136,7 +146,7 @@ async fn call_chat_completion(
     messages: Vec<ChatCompletionRequestMessage>,
 ) -> Result<String> {
     let request = CreateChatCompletionRequestArgs::default()
-        .model(config.model)
+        .model(config.model.as_str())
         .messages(messages)
         .build()
         .context("Failed to build chat completions request")?;
@@ -325,10 +335,9 @@ pub fn infer_category_and_benefit(
     merchant: &str,
     description: &str,
     benefits_with_categories: &[BenefitWithCategories],
-    openai_api_key: Option<&str>,
-    copilot_cli_path: Option<&Path>,
+    options: &LlmOptions,
 ) -> Result<InferredCategoryAndBenefit> {
-    let provider = resolve_provider(openai_api_key, copilot_cli_path)?;
+    let provider = resolve_provider(options)?;
 
     let valid_categories: Vec<String> = benefits_with_categories
         .iter()
@@ -406,10 +415,9 @@ pub struct ReceiptInferenceResult {
 pub fn infer_all_from_receipt(
     receipt_path: &Path,
     benefits_with_categories: &[BenefitWithCategories],
-    openai_api_key: Option<&str>,
-    copilot_cli_path: Option<&Path>,
+    options: &LlmOptions,
 ) -> Result<ReceiptInferenceResult> {
-    let provider = resolve_provider(openai_api_key, copilot_cli_path)?;
+    let provider = resolve_provider(options)?;
 
     let image_path = convert_to_image_if_needed(receipt_path)?;
     let image_b64 = encode_image_to_base64(&image_path)?;

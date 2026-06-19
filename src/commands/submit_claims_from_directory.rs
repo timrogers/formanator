@@ -9,7 +9,7 @@ use crate::claims::{ClaimInput, claim_input_to_create_options};
 use crate::cli::SubmitClaimsFromDirectoryArgs;
 use crate::config::resolve_access_token;
 use crate::forma::{create_claim, get_benefits_with_categories};
-use crate::llm::infer_all_from_receipt;
+use crate::llm::{LlmOptions, infer_all_from_receipt};
 use crate::prompt::prompt;
 use crate::verbose;
 
@@ -120,6 +120,13 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
     let mut processed = 0usize;
     let mut skipped = 0usize;
 
+    let llm_options = LlmOptions {
+        openai_api_key: args.openai_api_key.as_deref(),
+        openai_base_url: args.openai_base_url.as_deref(),
+        openai_model: args.openai_model.as_deref(),
+        copilot_cli_path: args.copilot_cli_path.as_deref(),
+    };
+
     for (index, receipt_file) in receipt_files.iter().enumerate() {
         let filename = receipt_file
             .file_name()
@@ -139,12 +146,7 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
 
         let outcome = (|| -> Result<bool> {
             println!("Analyzing receipt...");
-            let inferred = infer_all_from_receipt(
-                receipt_file,
-                &benefits,
-                args.openai_api_key.as_deref(),
-                args.copilot_cli_path.as_deref(),
-            )?;
+            let inferred = infer_all_from_receipt(receipt_file, &benefits, &llm_options)?;
 
             println!("{}", "\nInferred claim details:".green());
             println!("  Amount: {}", inferred.amount.yellow());

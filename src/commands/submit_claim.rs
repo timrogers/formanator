@@ -5,7 +5,7 @@ use crate::claims::{ClaimInput, claim_input_to_create_options};
 use crate::cli::SubmitClaimArgs;
 use crate::config::resolve_access_token;
 use crate::forma::{create_claim, get_benefits_with_categories};
-use crate::llm::{infer_all_from_receipt, infer_category_and_benefit};
+use crate::llm::{LlmOptions, infer_all_from_receipt, infer_category_and_benefit};
 use crate::prompt::prompt;
 use crate::verbose;
 
@@ -22,11 +22,20 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         description,
         receipt_path,
         openai_api_key,
+        openai_base_url,
+        openai_model,
         copilot_cli_path,
         dry_run,
         verbose: _,
         ..
     } = args;
+
+    let llm_options = LlmOptions {
+        openai_api_key: openai_api_key.as_deref(),
+        openai_base_url: openai_base_url.as_deref(),
+        openai_model: openai_model.as_deref(),
+        copilot_cli_path: copilot_cli_path.as_deref(),
+    };
 
     if receipt_path.is_empty() {
         bail!("You must specify at least one --receipt-path.");
@@ -83,12 +92,7 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         // Full receipt inference mode. Uses OpenAI when a key is provided,
         // otherwise falls back to the GitHub Copilot CLI.
         let benefits = get_benefits_with_categories(&access_token)?;
-        let inferred = infer_all_from_receipt(
-            &receipt_path[0],
-            &benefits,
-            openai_api_key.as_deref(),
-            copilot_cli_path.as_deref(),
-        )?;
+        let inferred = infer_all_from_receipt(&receipt_path[0], &benefits, &llm_options)?;
 
         println!(
             "{}",
@@ -130,13 +134,8 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         // Legacy mode: infer benefit and category only. Uses OpenAI when a
         // key is provided, otherwise the GitHub Copilot CLI.
         let benefits = get_benefits_with_categories(&access_token)?;
-        let inferred = infer_category_and_benefit(
-            &merchant,
-            &description,
-            &benefits,
-            openai_api_key.as_deref(),
-            copilot_cli_path.as_deref(),
-        )?;
+        let inferred =
+            infer_category_and_benefit(&merchant, &description, &benefits, &llm_options)?;
 
         println!(
             "The LLM inferred that you should claim using the {} benefit and {} category. If that seems right, hit Enter. If not, press Ctrl+C to end your session.",
