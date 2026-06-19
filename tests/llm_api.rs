@@ -215,9 +215,8 @@ fn infer_all_from_receipt_parses_structured_json_response() {
 
     let receipt = fake_jpeg_receipt();
     let bwcs = fixture_benefits_with_categories();
-    let result =
-        infer_all_from_receipt(receipt.path(), &bwcs, Some("test-openai-key"), None)
-            .expect("infer_all_from_receipt should succeed");
+    let result = infer_all_from_receipt(receipt.path(), &bwcs, Some("test-openai-key"), None)
+        .expect("infer_all_from_receipt should succeed");
 
     mock.assert();
     assert_eq!(result.amount, "3670.00");
@@ -298,9 +297,8 @@ fn infer_all_from_receipt_strips_markdown_code_fences() {
 
     let receipt = fake_jpeg_receipt();
     let bwcs = fixture_benefits_with_categories();
-    let result =
-        infer_all_from_receipt(receipt.path(), &bwcs, Some("test-openai-key"), None)
-            .expect("should parse fenced JSON");
+    let result = infer_all_from_receipt(receipt.path(), &bwcs, Some("test-openai-key"), None)
+        .expect("should parse fenced JSON");
     assert_eq!(result.amount, "42.00");
     assert_eq!(result.category, "University Program");
 }
