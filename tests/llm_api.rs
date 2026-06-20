@@ -165,7 +165,7 @@ fn infer_category_and_benefit_errors_when_llm_returns_unknown_category() {
         "id": "chatcmpl-test-bad-0001",
         "object": "chat.completion",
         "created": 1_745_000_000,
-        "model": "gpt-4.1-2025-04-14",
+        "model": "gpt-5.4-mini",
         "choices": [{
             "index": 0,
             "message": {"role": "assistant", "content": "Total Nonsense"},
@@ -249,7 +249,7 @@ fn infer_all_from_receipt_rejects_invalid_date_format() {
         "id": "chatcmpl-test-bad-date",
         "object": "chat.completion",
         "created": 1_745_000_000,
-        "model": "gpt-4.1-2025-04-14",
+        "model": "gpt-5.4-mini",
         "choices": [{
             "index": 0,
             "message": {"role": "assistant", "content": inner},
@@ -281,7 +281,7 @@ fn infer_all_from_receipt_strips_markdown_code_fences() {
         "id": "chatcmpl-test-fenced",
         "object": "chat.completion",
         "created": 1_745_000_000,
-        "model": "gpt-4.1-2025-04-14",
+        "model": "gpt-5.4-mini",
         "choices": [{
             "index": 0,
             "message": {"role": "assistant", "content": inner},
