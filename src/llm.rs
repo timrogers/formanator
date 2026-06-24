@@ -613,3 +613,13 @@ fn image_mime_type(path: &Path) -> String {
     }
     .to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::OPENAI_MODEL;
+
+    #[test]
+    fn default_openai_model_is_gpt_4o() {
+        assert_eq!(OPENAI_MODEL, "gpt-4o");
+    }
+}
