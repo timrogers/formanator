@@ -29,7 +29,7 @@ use crate::forma::BenefitWithCategories;
 use crate::verbose::is_enabled as is_verbose;
 
 const OPENAI_BASE: &str = "https://api.openai.com/v1";
-const OPENAI_MODEL: &str = "gpt-4o";
+const OPENAI_MODEL: &str = "GPT-5.4-mini";
 
 // Base-URL override for the LLM API. Production code never sets this; the
 // integration tests in `tests/llm_api.rs` use it to point
