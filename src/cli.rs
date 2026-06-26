@@ -114,13 +114,13 @@ pub struct SubmitClaimArgs {
     /// Access token used to authenticate with Forma.
     #[arg(long, env = "FORMANATOR_ACCESS_TOKEN")]
     pub access_token: Option<String>,
-    /// OpenAI API key used to infer claim details. Defaults to the `OPENAI_API_KEY` environment variable.
+    /// API key passed to the OpenAI-compatible inference API when inferring claim details. Defaults to the `OPENAI_API_KEY` environment variable.
     #[arg(long, env = "OPENAI_API_KEY")]
     pub openai_api_key: Option<String>,
-    /// OpenAI-compatible API base URL. Defaults to the `OPENAI_BASE_URL` environment variable, otherwise `https://api.openai.com/v1`.
+    /// Base URL for an OpenAI-compatible inference API for inferring claim details. Defaults to the `OPENAI_BASE_URL` environment variable, or OpenAI (`https://api.openai.com/v1`) if not present.
     #[arg(long, env = "OPENAI_BASE_URL")]
     pub openai_base_url: Option<String>,
-    /// OpenAI model to use for inference. Defaults to the `OPENAI_MODEL` environment variable, otherwise `gpt-5.4-mini`.
+    /// Model passed to the OpenAI-compatible inference API when inferring claim details. Defaults to the `OPENAI_MODEL` environment variable, or `gpt-5.4-mini` if not present.
     #[arg(long, env = "OPENAI_MODEL")]
     pub openai_model: Option<String>,
     /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
@@ -149,13 +149,13 @@ pub struct SubmitClaimsFromCsvArgs {
     /// Access token used to authenticate with Forma.
     #[arg(long, env = "FORMANATOR_ACCESS_TOKEN")]
     pub access_token: Option<String>,
-    /// OpenAI API key used to infer claim details for rows that leave columns blank.
+    /// API key passed to the OpenAI-compatible inference API when inferring claim details. Defaults to the `OPENAI_API_KEY` environment variable.
     #[arg(long, env = "OPENAI_API_KEY")]
     pub openai_api_key: Option<String>,
-    /// OpenAI-compatible API base URL. Defaults to the `OPENAI_BASE_URL` environment variable, otherwise `https://api.openai.com/v1`.
+    /// Base URL for an OpenAI-compatible inference API for inferring claim details. Defaults to the `OPENAI_BASE_URL` environment variable, or OpenAI (`https://api.openai.com/v1`) if not present.
     #[arg(long, env = "OPENAI_BASE_URL")]
     pub openai_base_url: Option<String>,
-    /// OpenAI model to use for inference. Defaults to the `OPENAI_MODEL` environment variable, otherwise `gpt-5.4-mini`.
+    /// Model passed to the OpenAI-compatible inference API when inferring claim details. Defaults to the `OPENAI_MODEL` environment variable, or `gpt-5.4-mini` if not present.
     #[arg(long, env = "OPENAI_MODEL")]
     pub openai_model: Option<String>,
     /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
@@ -180,13 +180,13 @@ pub struct SubmitClaimsFromDirectoryArgs {
     /// Access token used to authenticate with Forma.
     #[arg(long, env = "FORMANATOR_ACCESS_TOKEN")]
     pub access_token: Option<String>,
-    /// OpenAI API key used to infer claim details from receipts.
+    /// API key passed to the OpenAI-compatible inference API when inferring claim details. Defaults to the `OPENAI_API_KEY` environment variable.
     #[arg(long, env = "OPENAI_API_KEY")]
     pub openai_api_key: Option<String>,
-    /// OpenAI-compatible API base URL. Defaults to the `OPENAI_BASE_URL` environment variable, otherwise `https://api.openai.com/v1`.
+    /// Base URL for an OpenAI-compatible inference API for inferring claim details. Defaults to the `OPENAI_BASE_URL` environment variable, or OpenAI (`https://api.openai.com/v1`) if not present.
     #[arg(long, env = "OPENAI_BASE_URL")]
     pub openai_base_url: Option<String>,
-    /// OpenAI model to use for inference. Defaults to the `OPENAI_MODEL` environment variable, otherwise `gpt-5.4-mini`.
+    /// Model passed to the OpenAI-compatible inference API when inferring claim details. Defaults to the `OPENAI_MODEL` environment variable, or `gpt-5.4-mini` if not present.
     #[arg(long, env = "OPENAI_MODEL")]
     pub openai_model: Option<String>,
     /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
