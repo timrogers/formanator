@@ -145,6 +145,8 @@ fn infer_category_and_benefit_resolves_llm_response_to_benefit() {
         &bwcs,
         Some("test-openai-key"),
         None,
+        None,
+        None,
     )
     .expect("infer_category_and_benefit should succeed");
 
@@ -188,6 +190,8 @@ fn infer_category_and_benefit_errors_when_llm_returns_unknown_category() {
         &bwcs,
         Some("test-openai-key"),
         None,
+        None,
+        None,
     )
     .expect_err("should reject unknown category");
     assert!(
@@ -215,8 +219,15 @@ fn infer_all_from_receipt_parses_structured_json_response() {
 
     let receipt = fake_jpeg_receipt();
     let bwcs = fixture_benefits_with_categories();
-    let result = infer_all_from_receipt(receipt.path(), &bwcs, Some("test-openai-key"), None)
-        .expect("infer_all_from_receipt should succeed");
+    let result = infer_all_from_receipt(
+        receipt.path(),
+        &bwcs,
+        Some("test-openai-key"),
+        None,
+        None,
+        None,
+    )
+    .expect("infer_all_from_receipt should succeed");
 
     mock.assert();
     assert_eq!(result.amount, "3670.00");
@@ -265,8 +276,15 @@ fn infer_all_from_receipt_rejects_invalid_date_format() {
 
     let receipt = fake_jpeg_receipt();
     let bwcs = fixture_benefits_with_categories();
-    let err = infer_all_from_receipt(receipt.path(), &bwcs, Some("test-openai-key"), None)
-        .expect_err("should reject bad date");
+    let err = infer_all_from_receipt(
+        receipt.path(),
+        &bwcs,
+        Some("test-openai-key"),
+        None,
+        None,
+        None,
+    )
+    .expect_err("should reject bad date");
     assert!(format!("{err}").contains("invalid date format"), "{err}");
 }
 
@@ -297,8 +315,15 @@ fn infer_all_from_receipt_strips_markdown_code_fences() {
 
     let receipt = fake_jpeg_receipt();
     let bwcs = fixture_benefits_with_categories();
-    let result = infer_all_from_receipt(receipt.path(), &bwcs, Some("test-openai-key"), None)
-        .expect("should parse fenced JSON");
+    let result = infer_all_from_receipt(
+        receipt.path(),
+        &bwcs,
+        Some("test-openai-key"),
+        None,
+        None,
+        None,
+    )
+    .expect("should parse fenced JSON");
     assert_eq!(result.amount, "42.00");
     assert_eq!(result.category, "University Program");
 }
@@ -316,7 +341,7 @@ fn infer_category_and_benefit_falls_back_to_copilot_and_fails_with_bogus_cli_pat
     // where a real `copilot` binary is on PATH.
     let bwcs = fixture_benefits_with_categories();
     let bogus = std::path::Path::new("/no/such/copilot-cli-binary");
-    let err = infer_category_and_benefit("m", "d", &bwcs, None, Some(bogus))
+    let err = infer_category_and_benefit("m", "d", &bwcs, None, None, None, Some(bogus))
         .expect_err("should fail to launch the bogus Copilot CLI");
     // Just assert that an error was produced; the exact message comes from the
     // SDK / OS and is not stable across platforms.
