@@ -117,6 +117,12 @@ pub struct SubmitClaimArgs {
     /// OpenAI API key used to infer claim details. Defaults to the `OPENAI_API_KEY` environment variable.
     #[arg(long, env = "OPENAI_API_KEY")]
     pub openai_api_key: Option<String>,
+    /// OpenAI-compatible API base URL. Defaults to the `OPENAI_BASE_URL` environment variable, otherwise `https://api.openai.com/v1`.
+    #[arg(long, env = "OPENAI_BASE_URL")]
+    pub openai_base_url: Option<String>,
+    /// OpenAI model to use for inference. Defaults to the `OPENAI_MODEL` environment variable, otherwise `gpt-5.4-mini`.
+    #[arg(long, env = "OPENAI_MODEL")]
+    pub openai_model: Option<String>,
     /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
     #[arg(long, env = "COPILOT_CLI_PATH")]
     pub copilot_cli_path: Option<PathBuf>,
@@ -146,6 +152,12 @@ pub struct SubmitClaimsFromCsvArgs {
     /// OpenAI API key used to infer claim details for rows that leave columns blank.
     #[arg(long, env = "OPENAI_API_KEY")]
     pub openai_api_key: Option<String>,
+    /// OpenAI-compatible API base URL. Defaults to the `OPENAI_BASE_URL` environment variable, otherwise `https://api.openai.com/v1`.
+    #[arg(long, env = "OPENAI_BASE_URL")]
+    pub openai_base_url: Option<String>,
+    /// OpenAI model to use for inference. Defaults to the `OPENAI_MODEL` environment variable, otherwise `gpt-5.4-mini`.
+    #[arg(long, env = "OPENAI_MODEL")]
+    pub openai_model: Option<String>,
     /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
     #[arg(long, env = "COPILOT_CLI_PATH")]
     pub copilot_cli_path: Option<PathBuf>,
@@ -171,6 +183,12 @@ pub struct SubmitClaimsFromDirectoryArgs {
     /// OpenAI API key used to infer claim details from receipts.
     #[arg(long, env = "OPENAI_API_KEY")]
     pub openai_api_key: Option<String>,
+    /// OpenAI-compatible API base URL. Defaults to the `OPENAI_BASE_URL` environment variable, otherwise `https://api.openai.com/v1`.
+    #[arg(long, env = "OPENAI_BASE_URL")]
+    pub openai_base_url: Option<String>,
+    /// OpenAI model to use for inference. Defaults to the `OPENAI_MODEL` environment variable, otherwise `gpt-5.4-mini`.
+    #[arg(long, env = "OPENAI_MODEL")]
+    pub openai_model: Option<String>,
     /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
     #[arg(long, env = "COPILOT_CLI_PATH")]
     pub copilot_cli_path: Option<PathBuf>,
