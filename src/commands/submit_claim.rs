@@ -22,6 +22,8 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         description,
         receipt_path,
         openai_api_key,
+        openai_base_url,
+        openai_model,
         copilot_cli_path,
         dry_run,
         verbose: _,
@@ -87,6 +89,8 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
             &receipt_path[0],
             &benefits,
             openai_api_key.as_deref(),
+            openai_base_url.as_deref(),
+            openai_model.as_deref(),
             copilot_cli_path.as_deref(),
         )?;
 
@@ -135,6 +139,8 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
             &description,
             &benefits,
             openai_api_key.as_deref(),
+            openai_base_url.as_deref(),
+            openai_model.as_deref(),
             copilot_cli_path.as_deref(),
         )?;
 
