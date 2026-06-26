@@ -54,20 +54,30 @@ fn llm_api_base_override() -> Option<String> {
 /// Resolved configuration for an OpenAI-compatible API call.
 struct ApiConfig {
     client: OpenAiClient<OpenAIConfig>,
-    model: &'static str,
+    model: String,
     api_base: String,
 }
 
-fn resolve_api_config(openai_api_key: Option<&str>) -> Result<ApiConfig> {
+fn resolve_api_config(
+    openai_api_key: Option<&str>,
+    openai_base_url: Option<&str>,
+    openai_model: Option<&str>,
+) -> Result<ApiConfig> {
     let openai = openai_api_key.filter(|s| !s.is_empty());
 
-    let (base, key, model) = if let Some(key) = openai {
-        (OPENAI_BASE, key, OPENAI_MODEL)
+    let key = if let Some(key) = openai {
+        key
     } else {
         bail!("You must specify an OpenAI API key.")
     };
 
-    let base = llm_api_base_override().unwrap_or_else(|| base.to_string());
+    let base = llm_api_base_override()
+        .or_else(|| openai_base_url.filter(|s| !s.is_empty()).map(ToString::to_string))
+        .unwrap_or_else(|| OPENAI_BASE.to_string());
+    let model = openai_model
+        .filter(|s| !s.is_empty())
+        .map(ToString::to_string)
+        .unwrap_or_else(|| OPENAI_MODEL.to_string());
     let config = OpenAIConfig::new().with_api_base(&base).with_api_key(key);
     Ok(ApiConfig {
         client: OpenAiClient::with_config(config),
@@ -89,6 +99,8 @@ enum Provider {
 /// back to the GitHub Copilot CLI.
 fn resolve_provider(
     openai_api_key: Option<&str>,
+    openai_base_url: Option<&str>,
+    openai_model: Option<&str>,
     copilot_cli_path: Option<&Path>,
 ) -> Result<Provider> {
     let has_openai = openai_api_key.is_some_and(|s| !s.is_empty());
@@ -96,6 +108,8 @@ fn resolve_provider(
     if has_openai {
         Ok(Provider::OpenAiCompatible(Box::new(resolve_api_config(
             openai_api_key,
+            openai_base_url,
+            openai_model,
         )?)))
     } else {
         Ok(Provider::Copilot {
@@ -326,9 +340,11 @@ pub fn infer_category_and_benefit(
     description: &str,
     benefits_with_categories: &[BenefitWithCategories],
     openai_api_key: Option<&str>,
+    openai_base_url: Option<&str>,
+    openai_model: Option<&str>,
     copilot_cli_path: Option<&Path>,
 ) -> Result<InferredCategoryAndBenefit> {
-    let provider = resolve_provider(openai_api_key, copilot_cli_path)?;
+    let provider = resolve_provider(openai_api_key, openai_base_url, openai_model, copilot_cli_path)?;
 
     let valid_categories: Vec<String> = benefits_with_categories
         .iter()
@@ -407,9 +423,11 @@ pub fn infer_all_from_receipt(
     receipt_path: &Path,
     benefits_with_categories: &[BenefitWithCategories],
     openai_api_key: Option<&str>,
+    openai_base_url: Option<&str>,
+    openai_model: Option<&str>,
     copilot_cli_path: Option<&Path>,
 ) -> Result<ReceiptInferenceResult> {
-    let provider = resolve_provider(openai_api_key, copilot_cli_path)?;
+    let provider = resolve_provider(openai_api_key, openai_base_url, openai_model, copilot_cli_path)?;
 
     let image_path = convert_to_image_if_needed(receipt_path)?;
     let image_b64 = encode_image_to_base64(&image_path)?;
