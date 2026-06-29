@@ -145,7 +145,7 @@ impl FormanatorMcpServer {
             },
         }))
         .map_err(|e| McpError::internal_error(e.to_string(), None))?;
-        Ok(CallToolResult::success(vec![Content::text(json)]))
+        Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
     }
 
     #[tool(
@@ -162,7 +162,7 @@ impl FormanatorMcpServer {
     ) -> Result<CallToolResult, McpError> {
         request_magic_link(&params.email)
             .map_err(|e| McpError::internal_error(e.to_string(), None))?;
-        Ok(CallToolResult::success(vec![Content::text(
+        Ok(CallToolResult::success(vec![ContentBlock::text(
             "Forma has emailed a magic link. Call `login_complete` with the magic link from that email.",
         )]))
     }
@@ -180,7 +180,7 @@ impl FormanatorMcpServer {
         Parameters(params): Parameters<LoginCompleteParams>,
     ) -> Result<CallToolResult, McpError> {
         self.complete_login(&params.magic_link)?;
-        Ok(CallToolResult::success(vec![Content::text(
+        Ok(CallToolResult::success(vec![ContentBlock::text(
             "You are now logged in to Forma. The access token has been stored locally.",
         )]))
     }
@@ -198,7 +198,7 @@ impl FormanatorMcpServer {
             .map_err(|e| McpError::internal_error(e.to_string(), None))?;
         let json = serde_json::to_string_pretty(&benefits)
             .map_err(|e| McpError::internal_error(e.to_string(), None))?;
-        Ok(CallToolResult::success(vec![Content::text(json)]))
+        Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
     }
 
     #[tool(
@@ -224,7 +224,7 @@ impl FormanatorMcpServer {
             .map_err(|e| McpError::internal_error(e.to_string(), None))?;
         let json = serde_json::to_string_pretty(&claims)
             .map_err(|e| McpError::internal_error(e.to_string(), None))?;
-        Ok(CallToolResult::success(vec![Content::text(json)]))
+        Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
     }
 
     #[tool(
@@ -252,10 +252,12 @@ impl FormanatorMcpServer {
         let opts = claim_input_to_create_options(&claim, &token)
             .map_err(|e| McpError::internal_error(e.to_string(), None))?;
         match create_claim(&opts) {
-            Ok(()) => Ok(CallToolResult::success(vec![Content::text(
+            Ok(()) => Ok(CallToolResult::success(vec![ContentBlock::text(
                 "Claim created successfully",
             )])),
-            Err(e) => Ok(CallToolResult::error(vec![Content::text(e.to_string())])),
+            Err(e) => Ok(CallToolResult::error(vec![ContentBlock::text(
+                e.to_string(),
+            )])),
         }
     }
 }
