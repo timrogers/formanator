@@ -423,6 +423,75 @@ mod tests {
         );
     }
 
+    #[test]
+    fn token_returns_stored_value() {
+        let server = FormanatorMcpServer::new(Some("my-token".to_string()));
+        assert_eq!(server.token().expect("token should be present"), "my-token");
+    }
+
+    #[test]
+    fn has_access_token_returns_true_with_token() {
+        let server = FormanatorMcpServer::new(Some("tok".to_string()));
+        assert!(server.has_access_token().expect("no lock error"));
+    }
+
+    #[test]
+    fn has_access_token_returns_false_without_token() {
+        let server = FormanatorMcpServer::new(None);
+        assert!(!server.has_access_token().expect("no lock error"));
+    }
+
+    #[tokio::test]
+    async fn auth_status_reports_authenticated_with_access_token() {
+        let server = FormanatorMcpServer::new(Some("my-token".to_string()));
+        let result = server
+            .auth_status(Parameters(AuthStatusParams {}))
+            .await
+            .expect("auth status should succeed");
+        let text = result_text(result);
+        let status: serde_json::Value = serde_json::from_str(&text).expect("valid JSON");
+
+        assert_eq!(status["authenticated"], true);
+        assert!(
+            status["message"]
+                .as_str()
+                .expect("message")
+                .contains("access token"),
+            "unexpected message: {}",
+            status["message"]
+        );
+    }
+
+    #[tokio::test]
+    async fn list_claims_rejects_invalid_filter() {
+        let server = FormanatorMcpServer::new(Some("tok".to_string()));
+        let err = server
+            .list_claims(Parameters(ListClaimsParams {
+                filter: Some("bogus".to_string()),
+            }))
+            .await
+            .expect_err("invalid filter should return an error");
+
+        assert!(
+            err.message.contains("in_progress"),
+            "error should mention 'in_progress': {err:?}"
+        );
+    }
+
+    #[test]
+    fn resolve_initial_access_token_treats_empty_string_as_none() {
+        // An empty string should be treated as absent and fall through to the
+        // config/keychain lookup. We can't easily assert the exact return value
+        // here since it depends on the environment, but we can assert the
+        // function returns Ok (it only errors if config I/O fails).
+        let result = resolve_initial_access_token(Some(""));
+        assert!(result.is_ok(), "should not error for an empty token");
+        // The returned value must not be Some("").
+        if let Ok(Some(t)) = result {
+            assert!(!t.is_empty(), "returned token must not be empty");
+        }
+    }
+
     #[serial]
     #[test]
     fn login_complete_stores_token_and_updates_server_state() {

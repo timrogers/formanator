@@ -230,3 +230,163 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use super::*;
+
+    // ---------------------------------------------------------------------------
+    // is_supported_receipt
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn is_supported_receipt_accepts_known_extensions() {
+        for ext in &["jpg", "jpeg", "png", "pdf", "heic"] {
+            let path = Path::new("receipt").with_extension(ext);
+            assert!(is_supported_receipt(&path), ".{ext} should be supported");
+        }
+    }
+
+    #[test]
+    fn is_supported_receipt_is_case_insensitive() {
+        for ext in &["JPG", "PDF", "HEIC", "PNG"] {
+            let path = Path::new("receipt").with_extension(ext);
+            assert!(is_supported_receipt(&path), ".{ext} should be supported");
+        }
+    }
+
+    #[test]
+    fn is_supported_receipt_rejects_unknown_extensions() {
+        for ext in &["txt", "csv", "rs", "toml", "doc"] {
+            let path = Path::new("file").with_extension(ext);
+            assert!(
+                !is_supported_receipt(&path),
+                ".{ext} should not be supported"
+            );
+        }
+    }
+
+    #[test]
+    fn is_supported_receipt_rejects_no_extension() {
+        assert!(!is_supported_receipt(Path::new("receipt")));
+        assert!(!is_supported_receipt(Path::new("some/path/file")));
+    }
+
+    // ---------------------------------------------------------------------------
+    // list_receipt_files
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn list_receipt_files_returns_sorted_matching_files() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("b.pdf"), b"").unwrap();
+        fs::write(dir.path().join("a.jpg"), b"").unwrap();
+        fs::write(dir.path().join("c.txt"), b"").unwrap();
+
+        let files = list_receipt_files(dir.path()).unwrap();
+        assert_eq!(files.len(), 2, "only jpg and pdf should be listed");
+        assert_eq!(files[0].file_name().unwrap(), "a.jpg");
+        assert_eq!(files[1].file_name().unwrap(), "b.pdf");
+    }
+
+    #[test]
+    fn list_receipt_files_ignores_subdirectories() {
+        let dir = tempfile::tempdir().unwrap();
+        // A sub-directory that happens to have a receipt-like name.
+        fs::create_dir(dir.path().join("subdir.jpg")).unwrap();
+        fs::write(dir.path().join("real.png"), b"").unwrap();
+
+        let files = list_receipt_files(dir.path()).unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].file_name().unwrap(), "real.png");
+    }
+
+    #[test]
+    fn list_receipt_files_errors_on_missing_directory() {
+        let err = list_receipt_files(Path::new("/nonexistent/path/xyz")).unwrap_err();
+        assert!(
+            format!("{err}").contains("does not exist"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn list_receipt_files_returns_empty_for_no_matching_files() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("notes.txt"), b"").unwrap();
+
+        let files = list_receipt_files(dir.path()).unwrap();
+        assert!(files.is_empty());
+    }
+
+    // ---------------------------------------------------------------------------
+    // move_to_processed
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn move_to_processed_moves_file_to_destination() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("receipt.jpg");
+        fs::write(&source, b"data").unwrap();
+        let processed = dir.path().join("processed");
+
+        move_to_processed(&source, &processed).unwrap();
+
+        assert!(!source.exists(), "source should have been moved");
+        assert!(
+            processed.join("receipt.jpg").exists(),
+            "destination should exist"
+        );
+    }
+
+    #[test]
+    fn move_to_processed_creates_destination_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("r.png");
+        fs::write(&source, b"img").unwrap();
+        let processed = dir.path().join("a").join("b").join("processed");
+
+        move_to_processed(&source, &processed).unwrap();
+
+        assert!(processed.join("r.png").exists());
+    }
+
+    #[test]
+    fn move_to_processed_adds_timestamp_on_collision() {
+        let dir = tempfile::tempdir().unwrap();
+        let processed = dir.path().join("processed");
+
+        // First file.
+        let source1 = dir.path().join("receipt.jpg");
+        fs::write(&source1, b"first").unwrap();
+        move_to_processed(&source1, &processed).unwrap();
+
+        // Second file with the same name.
+        let source2 = dir.path().join("receipt.jpg");
+        fs::write(&source2, b"second").unwrap();
+        move_to_processed(&source2, &processed).unwrap();
+
+        // The original destination exists, and a timestamped variant was created.
+        assert!(
+            processed.join("receipt.jpg").exists(),
+            "original destination missing"
+        );
+        let entries: Vec<_> = fs::read_dir(&processed)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .collect();
+        assert_eq!(entries.len(), 2, "expected two files in processed dir");
+        // The second file should have a name containing a timestamp (hyphen-separated digits).
+        let names: Vec<String> = entries
+            .iter()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        let has_timestamped = names.iter().any(|n| n != "receipt.jpg");
+        assert!(
+            has_timestamped,
+            "expected a timestamped collision file; got: {names:?}"
+        );
+    }
+}
