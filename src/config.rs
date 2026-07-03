@@ -166,6 +166,7 @@ mod tests {
             std::env::set_var("FORMANATOR_USE_MOCK_KEYCHAIN", "1");
         }
         keychain::init();
+        let _ = keychain::delete_access_token();
 
         // Set a custom config path for testing
         let tmpdir = tempfile::tempdir().unwrap();
@@ -208,6 +209,7 @@ mod tests {
         }
 
         // Clean up
+        let _ = keychain::delete_access_token();
         unsafe {
             std::env::remove_var("FORMANATOR_CONFIG_PATH");
             std::env::remove_var("FORMANATOR_USE_MOCK_KEYCHAIN");
@@ -245,6 +247,7 @@ mod tests {
             std::env::set_var("FORMANATOR_USE_MOCK_KEYCHAIN", "1");
         }
         crate::keychain::init();
+        let _ = crate::keychain::delete_access_token();
 
         let tmpdir = tempfile::tempdir().unwrap();
         let missing = tmpdir.path().join("no-config.toml");
