@@ -77,6 +77,8 @@ When submitting a claim you can either provide every detail manually or let an L
 
 If both an OpenAI-compatible API key and the GitHub Copilot CLI are available, Formanator prefers the OpenAI-compatible API.
 
+Forma (and therefore Formanator) assumes that claim amounts are submitted in your account's currency. If a receipt is in a different currency, convert the amount before submitting or confirming the claim.
+
 ### Submitting claims in bulk
 
 #### Automatically submitting all receipts in a directory (recommended)
