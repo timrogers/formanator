@@ -15,3 +15,27 @@ pub fn set(enabled: bool) {
 pub fn is_enabled() -> bool {
     VERBOSE.load(Ordering::Relaxed)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn set_and_get_verbose_flag() {
+        set(true);
+        assert!(is_enabled());
+        set(false);
+        assert!(!is_enabled());
+    }
+
+    #[test]
+    fn verbose_is_a_bool_toggle() {
+        // Flip it on, confirm, flip it off, confirm. Avoids assuming the
+        // initial state since VERBOSE is a process-wide static.
+        let original = is_enabled();
+        set(!original);
+        assert_eq!(is_enabled(), !original);
+        set(original);
+        assert_eq!(is_enabled(), original);
+    }
+}

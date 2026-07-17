@@ -645,3 +645,132 @@ fn image_mime_type(path: &Path) -> String {
     }
     .to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::*;
+
+    // ---------------------------------------------------------------------------
+    // image_mime_type
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn image_mime_type_png() {
+        assert_eq!(image_mime_type(Path::new("foo.png")), "image/png");
+    }
+
+    #[test]
+    fn image_mime_type_heic() {
+        assert_eq!(image_mime_type(Path::new("receipt.heic")), "image/heic");
+    }
+
+    #[test]
+    fn image_mime_type_webp() {
+        assert_eq!(image_mime_type(Path::new("scan.webp")), "image/webp");
+    }
+
+    #[test]
+    fn image_mime_type_gif() {
+        assert_eq!(image_mime_type(Path::new("anim.gif")), "image/gif");
+    }
+
+    #[test]
+    fn image_mime_type_defaults_to_jpeg() {
+        assert_eq!(image_mime_type(Path::new("photo.jpg")), "image/jpeg");
+        assert_eq!(image_mime_type(Path::new("photo.jpeg")), "image/jpeg");
+        // PDFs are converted to JPEG before this function is called.
+        assert_eq!(image_mime_type(Path::new("doc.pdf")), "image/jpeg");
+        // Completely unknown extension also falls back to JPEG.
+        assert_eq!(image_mime_type(Path::new("file.xyz")), "image/jpeg");
+        // No extension at all falls back to JPEG.
+        assert_eq!(image_mime_type(Path::new("receipt")), "image/jpeg");
+    }
+
+    #[test]
+    fn image_mime_type_is_case_insensitive() {
+        assert_eq!(image_mime_type(Path::new("PHOTO.PNG")), "image/png");
+        assert_eq!(image_mime_type(Path::new("SCAN.HEIC")), "image/heic");
+    }
+
+    // ---------------------------------------------------------------------------
+    // resolve_api_config
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn resolve_api_config_errors_without_api_key() {
+        match resolve_api_config(None, None, None) {
+            Err(e) => assert!(
+                format!("{e}").contains("OpenAI API key"),
+                "unexpected error: {e}"
+            ),
+            Ok(_) => panic!("expected an error without API key"),
+        }
+    }
+
+    #[test]
+    fn resolve_api_config_errors_with_empty_api_key() {
+        match resolve_api_config(Some(""), None, None) {
+            Err(e) => assert!(
+                format!("{e}").contains("OpenAI API key"),
+                "unexpected error: {e}"
+            ),
+            Ok(_) => panic!("expected an error with empty API key"),
+        }
+    }
+
+    #[test]
+    fn resolve_api_config_uses_provided_key_and_defaults() {
+        match resolve_api_config(Some("sk-test"), None, None) {
+            Ok(config) => {
+                assert_eq!(config.api_base, OPENAI_BASE);
+                assert_eq!(config.model, OPENAI_MODEL);
+            }
+            Err(e) => panic!("expected success, got error: {e}"),
+        }
+    }
+
+    #[test]
+    fn resolve_api_config_respects_custom_base_and_model() {
+        match resolve_api_config(Some("sk-test"), Some("https://my.proxy/v1"), Some("gpt-99")) {
+            Ok(config) => {
+                assert_eq!(config.api_base, "https://my.proxy/v1");
+                assert_eq!(config.model, "gpt-99");
+            }
+            Err(e) => panic!("expected success, got error: {e}"),
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // resolve_provider
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn resolve_provider_selects_copilot_when_no_key() {
+        let provider = resolve_provider(None, None, None, None).expect("should default to copilot");
+        assert!(
+            matches!(provider, Provider::Copilot { .. }),
+            "expected Copilot provider"
+        );
+    }
+
+    #[test]
+    fn resolve_provider_selects_openai_when_key_given() {
+        let provider =
+            resolve_provider(Some("sk-test"), None, None, None).expect("should select OpenAI");
+        assert!(
+            matches!(provider, Provider::OpenAiCompatible(_)),
+            "expected OpenAiCompatible provider"
+        );
+    }
+
+    #[test]
+    fn resolve_provider_treats_empty_key_as_copilot() {
+        let provider = resolve_provider(Some(""), None, None, None).expect("empty key -> copilot");
+        assert!(
+            matches!(provider, Provider::Copilot { .. }),
+            "expected Copilot provider for empty key"
+        );
+    }
+}

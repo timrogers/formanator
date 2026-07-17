@@ -166,6 +166,7 @@ mod tests {
             std::env::set_var("FORMANATOR_USE_MOCK_KEYCHAIN", "1");
         }
         keychain::init();
+        let _ = keychain::delete_access_token();
 
         // Set a custom config path for testing
         let tmpdir = tempfile::tempdir().unwrap();
@@ -208,6 +209,7 @@ mod tests {
         }
 
         // Clean up
+        let _ = keychain::delete_access_token();
         unsafe {
             std::env::remove_var("FORMANATOR_CONFIG_PATH");
             std::env::remove_var("FORMANATOR_USE_MOCK_KEYCHAIN");
@@ -219,5 +221,50 @@ mod tests {
         // When an explicit value is provided, the saved config is not consulted.
         let token = resolve_access_token(Some("from-cli")).unwrap();
         assert_eq!(token, "from-cli");
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn read_config_returns_none_when_file_absent() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let missing = tmpdir.path().join("no-such-file.toml");
+        unsafe {
+            std::env::set_var("FORMANATOR_CONFIG_PATH", &missing);
+        }
+
+        let result = read_config().unwrap();
+        assert!(result.is_none(), "expected None for a missing config file");
+
+        unsafe {
+            std::env::remove_var("FORMANATOR_CONFIG_PATH");
+        }
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn resolve_access_token_errors_when_not_logged_in() {
+        unsafe {
+            std::env::set_var("FORMANATOR_USE_MOCK_KEYCHAIN", "1");
+        }
+        crate::keychain::init();
+        let _ = crate::keychain::delete_access_token();
+
+        let tmpdir = tempfile::tempdir().unwrap();
+        let missing = tmpdir.path().join("no-config.toml");
+        unsafe {
+            std::env::set_var("FORMANATOR_CONFIG_PATH", &missing);
+        }
+
+        let err = resolve_access_token(None).expect_err("should fail without a token");
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("formanator login") || msg.contains("logged in"),
+            "unexpected error message: {msg}"
+        );
+
+        unsafe {
+            std::env::remove_var("FORMANATOR_CONFIG_PATH");
+            std::env::remove_var("FORMANATOR_USE_MOCK_KEYCHAIN");
+        }
     }
 }
