@@ -631,3 +631,88 @@ fn submit_claims_from_directory_analyze_one_by_one_interleaves_analysis_and_prom
         .stdout(contains("Processed successfully: 2"));
     create.assert_calls(2);
 }
+
+#[test]
+#[serial]
+fn submit_claims_from_directory_aborts_early_when_the_llm_provider_rejects_the_request() {
+    let (server, mut cmd, _home) = cli_with_server();
+    server.mock(|when, then| {
+        when.method(GET).path("/client/api/v3/settings/profile");
+        then.status(200).body(fixture("profile_response.json"));
+    });
+    // An auth failure is not something the next receipt will recover from.
+    let inference = server.mock(|when, then| {
+        when.method(POST).path("/chat/completions");
+        then.status(401)
+            .header("content-type", "application/json")
+            .body(r#"{"error":{"message":"Incorrect API key provided","type":"invalid_request_error","code":"invalid_api_key"}}"#);
+    });
+    let create = server.mock(|when, then| {
+        when.method(POST).path("/client/api/v2/claims");
+        then.status(201)
+            .body(fixture("create_claim_response_success.json"));
+    });
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    for name in ["a.jpg", "b.jpg"] {
+        std::fs::copy(make_fake_receipt().path(), dir.path().join(name)).expect("copy receipt");
+    }
+
+    cmd.env("FORMANATOR_ACCESS_TOKEN", TOKEN)
+        .arg("submit-claims-from-directory")
+        .arg("--directory")
+        .arg(dir.path())
+        .args([
+            "--openai-api-key",
+            "test-openai-key",
+            "--openai-base-url",
+            &server.base_url(),
+        ])
+        .assert()
+        .failure()
+        .stderr(contains("Aborted before reviewing any claims"));
+
+    // The second receipt is never sent, and the user is never prompted.
+    inference.assert_calls(1);
+    create.assert_calls(0);
+}
+
+#[test]
+#[serial]
+fn submit_claims_from_directory_one_by_one_also_stops_on_a_provider_failure() {
+    let (server, mut cmd, _home) = cli_with_server();
+    server.mock(|when, then| {
+        when.method(GET).path("/client/api/v3/settings/profile");
+        then.status(200).body(fixture("profile_response.json"));
+    });
+    let inference = server.mock(|when, then| {
+        when.method(POST).path("/chat/completions");
+        then.status(401)
+            .header("content-type", "application/json")
+            .body(r#"{"error":{"message":"Incorrect API key provided","type":"invalid_request_error","code":"invalid_api_key"}}"#);
+    });
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    for name in ["a.jpg", "b.jpg"] {
+        std::fs::copy(make_fake_receipt().path(), dir.path().join(name)).expect("copy receipt");
+    }
+
+    cmd.env("FORMANATOR_ACCESS_TOKEN", TOKEN)
+        .arg("submit-claims-from-directory")
+        .arg("--directory")
+        .arg(dir.path())
+        .args([
+            "--openai-api-key",
+            "test-openai-key",
+            "--openai-base-url",
+            &server.base_url(),
+            "--analyze-one-by-one",
+        ])
+        .assert()
+        .failure()
+        .stderr(contains(
+            "Aborting: the remaining receipts can't be analysed.",
+        ));
+
+    inference.assert_calls(1);
+}

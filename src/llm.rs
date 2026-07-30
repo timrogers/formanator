@@ -28,6 +28,27 @@ use serde::Deserialize;
 use crate::forma::BenefitWithCategories;
 use crate::verbose::is_enabled as is_verbose;
 
+/// Attached as context to failures that mean the LLM provider itself is
+/// unusable (bad credentials, missing model, unreachable API, Copilot CLI that
+/// won't start) rather than a problem with one particular receipt. Callers
+/// processing a batch use [`is_provider_error`] to abort instead of retrying
+/// every remaining receipt against a provider that can't answer.
+#[derive(Debug)]
+pub struct ProviderUnavailable;
+
+impl std::fmt::Display for ProviderUnavailable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "The LLM provider is unavailable")
+    }
+}
+
+impl std::error::Error for ProviderUnavailable {}
+
+/// Whether an inference failure came from the provider rather than the receipt.
+pub fn is_provider_error(error: &anyhow::Error) -> bool {
+    error.downcast_ref::<ProviderUnavailable>().is_some()
+}
+
 const OPENAI_BASE: &str = "https://api.openai.com/v1";
 const OPENAI_MODEL: &str = "gpt-5.4-mini";
 
@@ -172,7 +193,8 @@ async fn call_chat_completion(
         .chat()
         .create(request)
         .await
-        .context("Failed to call chat completions endpoint")?;
+        .context("Failed to call chat completions endpoint")
+        .context(ProviderUnavailable)?;
 
     if is_verbose() {
         match serde_json::to_string(&response) {
@@ -235,9 +257,12 @@ async fn copilot_complete(
     let mut options = ClientOptions::default();
     options.program = program;
 
-    let client = CopilotClient::start(options).await.context(
-        "Failed to start the GitHub Copilot CLI. Ensure the `copilot` CLI is installed and on your PATH, pass --copilot-cli-path, or set COPILOT_CLI_PATH.",
-    )?;
+    let client = CopilotClient::start(options)
+        .await
+        .context(
+            "Failed to start the GitHub Copilot CLI. Ensure the `copilot` CLI is installed and on your PATH, pass --copilot-cli-path, or set COPILOT_CLI_PATH.",
+        )
+        .context(ProviderUnavailable)?;
 
     let result = copilot_run_session(&client, prompt, image).await;
 
@@ -256,7 +281,8 @@ async fn copilot_run_session(
     let session = client
         .create_session(SessionConfig::default().approve_all_permissions())
         .await
-        .context("Failed to create a GitHub Copilot session")?;
+        .context("Failed to create a GitHub Copilot session")
+        .context(ProviderUnavailable)?;
 
     let message = MessageOptions::new(prompt).with_wait_timeout(Duration::from_secs(120));
     let message = match image {

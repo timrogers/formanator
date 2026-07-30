@@ -1,7 +1,8 @@
 use std::fs;
+use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use chrono::Utc;
 use colored::Colorize;
 
@@ -9,7 +10,7 @@ use crate::claims::{ClaimInput, claim_input_to_create_options};
 use crate::cli::SubmitClaimsFromDirectoryArgs;
 use crate::config::resolve_access_token;
 use crate::forma::{create_claim, get_benefits_with_categories};
-use crate::llm::infer_all_from_receipt;
+use crate::llm::{infer_all_from_receipt, is_provider_error};
 use crate::prompt::prompt;
 use crate::verbose;
 
@@ -39,6 +40,39 @@ fn list_receipt_files(directory: &Path) -> Result<Vec<PathBuf>> {
     }
     files.sort();
     Ok(files)
+}
+
+const PROGRESS_WIDTH: usize = 30;
+
+/// Draw a single-line progress bar, rewriting it in place. Falls back to one
+/// plain line per receipt when stdout isn't a terminal, so piped output and CI
+/// logs stay readable.
+fn draw_progress(done: usize, total: usize, label: &str) {
+    let mut stdout = std::io::stdout();
+    if !stdout.is_terminal() {
+        println!("Analyzing receipt {done}/{total}: {label}");
+        return;
+    }
+    // \r returns to the start of the line and \x1b[K clears whatever the
+    // previous, possibly longer, filename left behind.
+    print!("\r\x1b[K{}", progress_line(done, total, label));
+    let _ = stdout.flush();
+}
+
+fn progress_line(done: usize, total: usize, label: &str) -> String {
+    let filled = (PROGRESS_WIDTH * done.min(total) / total.max(1)).min(PROGRESS_WIDTH);
+    let bar = format!(
+        "{}{}",
+        "\u{2588}".repeat(filled),
+        "\u{2591}".repeat(PROGRESS_WIDTH - filled)
+    );
+    format!("[{}] {done}/{total} {label}", bar.cyan())
+}
+
+fn finish_progress() {
+    if std::io::stdout().is_terminal() {
+        println!();
+    }
 }
 
 fn move_to_processed(source: &Path, processed_dir: &Path) -> Result<()> {
@@ -131,9 +165,8 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
 
     // By default every receipt is analysed up front so all the confirmation
     // prompts happen together, without waiting for the LLM in between.
-    let pre_analyzed = if args.analyze_one_by_one {
-        Vec::new()
-    } else {
+    let mut pre_analyzed = Vec::new();
+    if !args.analyze_one_by_one {
         println!(
             "{}",
             format!(
@@ -142,27 +175,35 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
             )
             .cyan()
         );
-        receipt_files
-            .iter()
-            .enumerate()
-            .map(|(index, receipt_file)| {
-                println!(
-                    "Analyzing receipt {}/{}: {}",
-                    index + 1,
-                    receipt_files.len(),
-                    receipt_file
-                        .file_name()
-                        .unwrap_or_default()
-                        .to_string_lossy()
+        for (index, receipt_file) in receipt_files.iter().enumerate() {
+            draw_progress(
+                index + 1,
+                receipt_files.len(),
+                &receipt_file
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy(),
+            );
+            let result = analyze(receipt_file);
+            // Nothing has been submitted yet, so a dead provider means bailing
+            // out now rather than making the user sit through the rest.
+            if let Err(error) = &result
+                && is_provider_error(error)
+            {
+                finish_progress();
+                return Err(result.unwrap_err()).context(
+                    "Aborted before reviewing any claims because the receipts could not be analysed",
                 );
-                analyze(receipt_file)
-            })
-            .collect()
-    };
+            }
+            pre_analyzed.push(result);
+        }
+        finish_progress();
+    }
     let mut pre_analyzed = pre_analyzed.into_iter();
 
     let mut processed = 0usize;
     let mut skipped = 0usize;
+    let mut aborted = false;
 
     for (index, receipt_file) in receipt_files.iter().enumerate() {
         let filename = receipt_file
@@ -249,8 +290,16 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
             Ok(true) => processed += 1,
             Ok(false) => skipped += 1,
             Err(e) => {
-                eprintln!("{}", format!("❌ Error processing {filename}: {e}").red());
+                eprintln!("{}", format!("❌ Error processing {filename}: {e:#}").red());
                 skipped += 1;
+                if is_provider_error(&e) {
+                    eprintln!(
+                        "{}",
+                        "Aborting: the remaining receipts can't be analysed.".red()
+                    );
+                    aborted = true;
+                    break;
+                }
             }
         }
     }
@@ -270,5 +319,40 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
             .blue()
         );
     }
+    if aborted {
+        bail!("Stopped early because the receipts could not be analysed.");
+    }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{PROGRESS_WIDTH, progress_line};
+
+    fn blocks(line: &str) -> (usize, usize) {
+        (
+            line.matches('\u{2588}').count(),
+            line.matches('\u{2591}').count(),
+        )
+    }
+
+    #[test]
+    fn progress_line_fills_in_proportion_and_never_overflows() {
+        assert_eq!(blocks(&progress_line(0, 4, "a.jpg")), (0, PROGRESS_WIDTH));
+        assert_eq!(
+            blocks(&progress_line(2, 4, "a.jpg")),
+            (PROGRESS_WIDTH / 2, PROGRESS_WIDTH / 2)
+        );
+        assert_eq!(blocks(&progress_line(4, 4, "a.jpg")), (PROGRESS_WIDTH, 0));
+        // Degenerate inputs must not panic or overflow the bar.
+        assert_eq!(blocks(&progress_line(0, 0, "a.jpg")), (0, PROGRESS_WIDTH));
+        assert_eq!(blocks(&progress_line(9, 4, "a.jpg")), (PROGRESS_WIDTH, 0));
+    }
+
+    #[test]
+    fn progress_line_shows_the_count_and_the_receipt_name() {
+        let line = progress_line(3, 7, "receipt.jpg");
+        assert!(line.contains("3/7"), "{line}");
+        assert!(line.contains("receipt.jpg"), "{line}");
+    }
 }
