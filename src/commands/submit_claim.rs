@@ -26,7 +26,6 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         openai_model,
         copilot_cli_path,
         dry_run,
-        verbose: _,
         ..
     } = args;
 
