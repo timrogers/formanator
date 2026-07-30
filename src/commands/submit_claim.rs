@@ -27,7 +27,6 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         copilot_cli_path,
         yolo,
         dry_run,
-        verbose: _,
         ..
     } = args;
 
