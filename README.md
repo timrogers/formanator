@@ -87,6 +87,12 @@ formanator submit-claims-from-directory --directory input/
 
 All `.jpg`, `.jpeg`, `.png`, `.pdf` and `.heic` receipts in the directory will be analysed by the LLM. You'll be asked to confirm the inferred claim details for each receipt before it's submitted, and successfully-submitted receipts are moved into a `processed/` subdirectory.
 
+By default, analysis and confirmation are interleaved, so you have to wait for the LLM between each receipt. Add `--analyze-first` to analyse every receipt up front instead, so you can walk away while it runs and then confirm all of them back to back:
+
+```bash
+formanator submit-claims-from-directory --directory input/ --analyze-first
+```
+
 #### Manually submitting receipts using a CSV template
 
 1. Generate a template: `formanator generate-template-csv` (writes `claims.csv`).

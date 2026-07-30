@@ -117,6 +117,50 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
     println!();
 
     let benefits = get_benefits_with_categories(&access_token)?;
+
+    let analyze = |receipt_file: &Path| {
+        infer_all_from_receipt(
+            receipt_file,
+            &benefits,
+            args.openai_api_key.as_deref(),
+            args.openai_base_url.as_deref(),
+            args.openai_model.as_deref(),
+            args.copilot_cli_path.as_deref(),
+        )
+    };
+
+    // With --analyze-first every receipt is analysed up front so all the
+    // confirmation prompts happen together, without waiting for the LLM.
+    let pre_analyzed = if args.analyze_first {
+        println!(
+            "{}",
+            format!(
+                "Analyzing {} receipt(s) before review...",
+                receipt_files.len()
+            )
+            .cyan()
+        );
+        receipt_files
+            .iter()
+            .enumerate()
+            .map(|(index, receipt_file)| {
+                println!(
+                    "Analyzing receipt {}/{}: {}",
+                    index + 1,
+                    receipt_files.len(),
+                    receipt_file
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                );
+                analyze(receipt_file)
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let mut pre_analyzed = pre_analyzed.into_iter();
+
     let mut processed = 0usize;
     let mut skipped = 0usize;
 
@@ -138,15 +182,13 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
         );
 
         let outcome = (|| -> Result<bool> {
-            println!("Analyzing receipt...");
-            let inferred = infer_all_from_receipt(
-                receipt_file,
-                &benefits,
-                args.openai_api_key.as_deref(),
-                args.openai_base_url.as_deref(),
-                args.openai_model.as_deref(),
-                args.copilot_cli_path.as_deref(),
-            )?;
+            let inferred = match pre_analyzed.next() {
+                Some(inferred) => inferred?,
+                None => {
+                    println!("Analyzing receipt...");
+                    analyze(receipt_file)?
+                }
+            };
 
             println!("{}", "\nInferred claim details:".green());
             println!("  Amount: {}", inferred.amount.yellow());
