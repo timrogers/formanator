@@ -192,9 +192,6 @@ pub struct SubmitClaimsFromDirectoryArgs {
     /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
     #[arg(long, env = "COPILOT_CLI_PATH")]
     pub copilot_cli_path: Option<PathBuf>,
-    /// Analyse and confirm one receipt at a time, instead of analysing them all up front.
-    #[arg(long)]
-    pub analyze_one_by_one: bool,
     /// Run through the entire flow without actually submitting the claims.
     #[arg(long)]
     pub dry_run: bool,

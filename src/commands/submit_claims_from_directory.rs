@@ -152,60 +152,52 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
 
     let benefits = get_benefits_with_categories(&access_token)?;
 
-    let analyze = |receipt_file: &Path| {
-        infer_all_from_receipt(
+    // Every receipt is analysed up front so all the confirmation prompts
+    // happen together, without waiting for the LLM in between.
+    println!(
+        "{}",
+        format!(
+            "Analyzing {} receipt(s) before review...",
+            receipt_files.len()
+        )
+        .cyan()
+    );
+    let mut analyzed = Vec::new();
+    for (index, receipt_file) in receipt_files.iter().enumerate() {
+        draw_progress(
+            index + 1,
+            receipt_files.len(),
+            &receipt_file
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy(),
+        );
+        let result = infer_all_from_receipt(
             receipt_file,
             &benefits,
             args.openai_api_key.as_deref(),
             args.openai_base_url.as_deref(),
             args.openai_model.as_deref(),
             args.copilot_cli_path.as_deref(),
-        )
-    };
-
-    // By default every receipt is analysed up front so all the confirmation
-    // prompts happen together, without waiting for the LLM in between.
-    let mut pre_analyzed = Vec::new();
-    if !args.analyze_one_by_one {
-        println!(
-            "{}",
-            format!(
-                "Analyzing {} receipt(s) before review...",
-                receipt_files.len()
-            )
-            .cyan()
         );
-        for (index, receipt_file) in receipt_files.iter().enumerate() {
-            draw_progress(
-                index + 1,
-                receipt_files.len(),
-                &receipt_file
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy(),
+        // Nothing has been submitted yet, so a dead provider means bailing
+        // out now rather than making the user sit through the rest.
+        if let Err(error) = &result
+            && is_provider_error(error)
+        {
+            finish_progress();
+            return Err(result.unwrap_err()).context(
+                "Aborted before reviewing any claims because the receipts could not be analysed",
             );
-            let result = analyze(receipt_file);
-            // Nothing has been submitted yet, so a dead provider means bailing
-            // out now rather than making the user sit through the rest.
-            if let Err(error) = &result
-                && is_provider_error(error)
-            {
-                finish_progress();
-                return Err(result.unwrap_err()).context(
-                    "Aborted before reviewing any claims because the receipts could not be analysed",
-                );
-            }
-            pre_analyzed.push(result);
         }
-        finish_progress();
+        analyzed.push(result);
     }
-    let mut pre_analyzed = pre_analyzed.into_iter();
+    finish_progress();
 
     let mut processed = 0usize;
     let mut skipped = 0usize;
-    let mut aborted = false;
 
-    for (index, receipt_file) in receipt_files.iter().enumerate() {
+    for (index, (receipt_file, inferred)) in receipt_files.iter().zip(analyzed).enumerate() {
         let filename = receipt_file
             .file_name()
             .unwrap_or_default()
@@ -223,13 +215,7 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
         );
 
         let outcome = (|| -> Result<bool> {
-            let inferred = match pre_analyzed.next() {
-                Some(inferred) => inferred?,
-                None => {
-                    println!("Analyzing receipt...");
-                    analyze(receipt_file)?
-                }
-            };
+            let inferred = inferred?;
 
             println!("{}", "\nInferred claim details:".green());
             println!("  Amount: {}", inferred.amount.yellow());
@@ -292,14 +278,6 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
             Err(e) => {
                 eprintln!("{}", format!("❌ Error processing {filename}: {e:#}").red());
                 skipped += 1;
-                if is_provider_error(&e) {
-                    eprintln!(
-                        "{}",
-                        "Aborting: the remaining receipts can't be analysed.".red()
-                    );
-                    aborted = true;
-                    break;
-                }
             }
         }
     }
@@ -318,9 +296,6 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
             )
             .blue()
         );
-    }
-    if aborted {
-        bail!("Stopped early because the receipts could not be analysed.");
     }
     Ok(())
 }

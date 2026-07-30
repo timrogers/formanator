@@ -87,11 +87,7 @@ formanator submit-claims-from-directory --directory input/
 
 All `.jpg`, `.jpeg`, `.png`, `.pdf` and `.heic` receipts in the directory will be analysed by the LLM. You'll be asked to confirm the inferred claim details for each receipt before it's submitted, and successfully-submitted receipts are moved into a `processed/` subdirectory.
 
-Every receipt is analysed up front, with a progress bar, so you can walk away while that runs and then confirm all of them back to back. If the LLM provider itself can't be reached — bad API key, missing model, Copilot CLI that won't start — Formanator stops straight away instead of failing its way through the rest of the directory. Add `--analyze-one-by-one` if you'd rather interleave the two, waiting for the LLM to analyse each receipt just before you confirm it:
-
-```bash
-formanator submit-claims-from-directory --directory input/ --analyze-one-by-one
-```
+Every receipt is analysed up front, with a progress bar, so you can walk away while that runs and then confirm all of them back to back. If the LLM provider itself can't be reached — bad API key, missing model, Copilot CLI that won't start — Formanator stops straight away instead of failing its way through the rest of the directory.
 
 #### Manually submitting receipts using a CSV template
 
