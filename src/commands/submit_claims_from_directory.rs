@@ -129,9 +129,11 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
         )
     };
 
-    // With --analyze-first every receipt is analysed up front so all the
-    // confirmation prompts happen together, without waiting for the LLM.
-    let pre_analyzed = if args.analyze_first {
+    // By default every receipt is analysed up front so all the confirmation
+    // prompts happen together, without waiting for the LLM in between.
+    let pre_analyzed = if args.analyze_one_by_one {
+        Vec::new()
+    } else {
         println!(
             "{}",
             format!(
@@ -156,8 +158,6 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
                 analyze(receipt_file)
             })
             .collect()
-    } else {
-        Vec::new()
     };
     let mut pre_analyzed = pre_analyzed.into_iter();
 

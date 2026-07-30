@@ -520,7 +520,7 @@ fn login_with_invalid_magic_link_fails_without_writing_config() {
 
 #[test]
 #[serial]
-fn submit_claims_from_directory_with_analyze_first_analyses_everything_before_prompting() {
+fn submit_claims_from_directory_analyses_everything_before_prompting() {
     let (server, mut cmd, _home) = cli_with_server();
     server.mock(|when, then| {
         when.method(GET).path("/client/api/v3/settings/profile");
@@ -559,7 +559,6 @@ fn submit_claims_from_directory_with_analyze_first_analyses_everything_before_pr
             "test-openai-key",
             "--openai-base-url",
             &server.base_url(),
-            "--analyze-first",
         ])
         .stdin(approvals)
         .assert()
@@ -583,4 +582,52 @@ fn submit_claims_from_directory_with_analyze_first_analyses_everything_before_pr
         last_analysis < first_prompt,
         "all receipts should be analysed before the first prompt, got:\n{stdout}"
     );
+}
+
+#[test]
+#[serial]
+fn submit_claims_from_directory_analyze_one_by_one_interleaves_analysis_and_prompts() {
+    let (server, mut cmd, _home) = cli_with_server();
+    server.mock(|when, then| {
+        when.method(GET).path("/client/api/v3/settings/profile");
+        then.status(200).body(fixture("profile_response.json"));
+    });
+    server.mock(|when, then| {
+        when.method(POST).path("/chat/completions");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(fixture("llm_receipt_inference_response.json"));
+    });
+    let create = server.mock(|when, then| {
+        when.method(POST).path("/client/api/v2/claims");
+        then.status(201)
+            .body(fixture("create_claim_response_success.json"));
+    });
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    for name in ["a.jpg", "b.jpg"] {
+        std::fs::copy(make_fake_receipt().path(), dir.path().join(name)).expect("copy receipt");
+    }
+    let mut approvals_file = tempfile::NamedTempFile::new().expect("tempfile");
+    std::io::Write::write_all(&mut approvals_file, b"y\ny\n").expect("write approvals");
+    let approvals = std::fs::File::open(approvals_file.path()).expect("open approvals");
+
+    cmd.env("FORMANATOR_ACCESS_TOKEN", TOKEN)
+        .arg("submit-claims-from-directory")
+        .arg("--directory")
+        .arg(dir.path())
+        .args([
+            "--openai-api-key",
+            "test-openai-key",
+            "--openai-base-url",
+            &server.base_url(),
+            "--analyze-one-by-one",
+        ])
+        .stdin(approvals)
+        .assert()
+        .success()
+        .stdout(contains("Analyzing receipt..."))
+        .stdout(contains("before review...").not())
+        .stdout(contains("Processed successfully: 2"));
+    create.assert_calls(2);
 }
