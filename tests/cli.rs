@@ -713,6 +713,8 @@ fn submit_claims_from_directory_with_yolo_and_dry_run_does_not_submit_or_move_re
         .assert()
         .success()
         .stdout(contains("Dry run"))
+        .stdout(contains("Claim submitted successfully").not())
+        .stdout(contains("Moved processed receipt to").not())
         .stdout(contains("Processed successfully: 1"));
 
     // The receipt must remain in the input directory rather than being
