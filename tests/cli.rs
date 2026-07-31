@@ -517,3 +517,91 @@ fn login_with_invalid_magic_link_fails_without_writing_config() {
         "no config file should have been written"
     );
 }
+
+#[test]
+#[serial]
+fn submit_claims_from_directory_with_yolo_submits_without_prompting() {
+    let (server, mut cmd, _home) = cli_with_server();
+    server.mock(|when, then| {
+        when.method(GET).path("/client/api/v3/settings/profile");
+        then.status(200).body(fixture("profile_response.json"));
+    });
+    server.mock(|when, then| {
+        when.method(POST).path("/chat/completions");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(fixture("llm_receipt_inference_response.json"));
+    });
+    let create = server.mock(|when, then| {
+        when.method(POST).path("/client/api/v2/claims");
+        then.status(201)
+            .body(fixture("create_claim_response_success.json"));
+    });
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::copy(make_fake_receipt().path(), dir.path().join("receipt.jpg"))
+        .expect("copy receipt");
+
+    // stdin says "n", so the claim can only be submitted if `--yolo` skipped
+    // the confirmation prompt rather than reading an answer from it.
+    let mut rejection_file = tempfile::NamedTempFile::new().expect("tempfile");
+    std::io::Write::write_all(&mut rejection_file, b"n\n").expect("write rejection");
+    let rejection = std::fs::File::open(rejection_file.path()).expect("open rejection");
+
+    cmd.env("FORMANATOR_ACCESS_TOKEN", TOKEN)
+        .arg("submit-claims-from-directory")
+        .arg("--directory")
+        .arg(dir.path())
+        .args([
+            "--openai-api-key",
+            "test-openai-key",
+            "--openai-base-url",
+            &server.base_url(),
+            "--yolo",
+        ])
+        .stdin(rejection)
+        .assert()
+        .success()
+        .stdout(contains("Claim submitted successfully"))
+        .stdout(contains("Processed successfully: 1"));
+    create.assert();
+}
+
+#[test]
+#[serial]
+fn submit_claim_with_yolo_submits_without_showing_the_confirmation_prompt() {
+    let (server, mut cmd, _home) = cli_with_server();
+    server.mock(|when, then| {
+        when.method(GET).path("/client/api/v3/settings/profile");
+        then.status(200).body(fixture("profile_response.json"));
+    });
+    server.mock(|when, then| {
+        when.method(POST).path("/chat/completions");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(fixture("llm_receipt_inference_response.json"));
+    });
+    let create = server.mock(|when, then| {
+        when.method(POST).path("/client/api/v2/claims");
+        then.status(201)
+            .body(fixture("create_claim_response_success.json"));
+    });
+
+    let receipt = make_fake_receipt();
+
+    cmd.env("FORMANATOR_ACCESS_TOKEN", TOKEN)
+        .args(["submit-claim", "--receipt-path"])
+        .arg(receipt.path())
+        .args([
+            "--openai-api-key",
+            "test-openai-key",
+            "--openai-base-url",
+            &server.base_url(),
+            "--yolo",
+        ])
+        .assert()
+        .success()
+        .stdout(contains("If these details look correct").not())
+        .stdout(contains("Claim submitted successfully"));
+    create.assert();
+}

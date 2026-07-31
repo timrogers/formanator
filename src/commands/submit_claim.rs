@@ -25,6 +25,7 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         openai_base_url,
         openai_model,
         copilot_cli_path,
+        yolo,
         dry_run,
         ..
     } = args;
@@ -104,10 +105,12 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         println!("Benefit: {}", inferred.benefit.magenta());
         println!("Category: {}", inferred.category.magenta());
         println!();
-        println!(
-            "If these details look correct, hit Enter to proceed. If not, press Ctrl+C to end your session."
-        );
-        let _ = prompt("> ")?;
+        if !yolo {
+            println!(
+                "If these details look correct, hit Enter to proceed. If not, press Ctrl+C to end your session."
+            );
+            let _ = prompt("> ")?;
+        }
 
         let claim = ClaimInput {
             benefit: inferred.benefit,
@@ -143,12 +146,14 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
             copilot_cli_path.as_deref(),
         )?;
 
-        println!(
-            "The LLM inferred that you should claim using the {} benefit and {} category. If that seems right, hit Enter. If not, press Ctrl+C to end your session.",
-            inferred.benefit.magenta(),
-            inferred.category.magenta(),
-        );
-        let _ = prompt("> ")?;
+        if !yolo {
+            println!(
+                "The LLM inferred that you should claim using the {} benefit and {} category. If that seems right, hit Enter. If not, press Ctrl+C to end your session.",
+                inferred.benefit.magenta(),
+                inferred.category.magenta(),
+            );
+            let _ = prompt("> ")?;
+        }
 
         let claim = ClaimInput {
             benefit: inferred.benefit,
