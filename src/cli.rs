@@ -126,6 +126,9 @@ pub struct SubmitClaimArgs {
     /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
     #[arg(long, env = "COPILOT_CLI_PATH")]
     pub copilot_cli_path: Option<PathBuf>,
+    /// Skip all confirmation prompts and submit claims without asking.
+    #[arg(long)]
+    pub yolo: bool,
     /// Run through the entire flow without actually submitting the claim.
     #[arg(long)]
     pub dry_run: bool,
@@ -192,6 +195,9 @@ pub struct SubmitClaimsFromDirectoryArgs {
     /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
     #[arg(long, env = "COPILOT_CLI_PATH")]
     pub copilot_cli_path: Option<PathBuf>,
+    /// Skip all confirmation prompts and submit claims without asking.
+    #[arg(long)]
+    pub yolo: bool,
     /// Run through the entire flow without actually submitting the claims.
     #[arg(long)]
     pub dry_run: bool,

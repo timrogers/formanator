@@ -225,12 +225,18 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
             println!("  Benefit: {}", inferred.benefit.yellow());
             println!("  Category: {}", inferred.category.yellow());
 
-            println!(
-                "\n{}",
-                "Do you want to submit this claim? Enter Y to proceed or N to skip:".white()
-            );
-            let response = prompt("> ")?.trim().to_ascii_lowercase();
-            if response == "y" || response == "yes" {
+            let approved = if args.yolo {
+                true
+            } else {
+                println!(
+                    "\n{}",
+                    "Do you want to submit this claim? Enter Y to proceed or N to skip:".white()
+                );
+                let response = prompt("> ")?.trim().to_ascii_lowercase();
+                response == "y" || response == "yes"
+            };
+
+            if approved {
                 println!("Submitting claim...");
                 let claim = ClaimInput {
                     benefit: inferred.benefit,

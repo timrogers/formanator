@@ -89,6 +89,12 @@ All `.jpg`, `.jpeg`, `.png`, `.pdf` and `.heic` receipts in the directory will b
 
 Every receipt is analysed up front, with a progress bar, so you can walk away while that runs and then confirm all of them back to back. If the LLM provider itself can't be reached — bad API key, missing model, Copilot CLI that won't start — Formanator stops straight away instead of failing its way through the rest of the directory.
 
+If you trust the LLM and don't want to confirm anything, add `--yolo` to submit every receipt as soon as it's been analysed:
+
+```bash
+formanator submit-claims-from-directory --directory input/ --yolo
+```
+
 #### Manually submitting receipts using a CSV template
 
 1. Generate a template: `formanator generate-template-csv` (writes `claims.csv`).
@@ -104,7 +110,7 @@ Every receipt is analysed up front, with a progress bar, so you can walk away wh
 formanator submit-claim --receipt-path receipt.jpg
 ```
 
-Formanator will ask the LLM to extract the amount, merchant, purchase date, description, benefit and category, show you the result and ask you to confirm before submitting.
+Formanator will ask the LLM to extract the amount, merchant, purchase date, description, benefit and category, show you the result and ask you to confirm before submitting. Pass `--yolo` to skip the confirmation and submit straight away.
 
 #### Option 2: Provide details manually, infer benefit and category
 
