@@ -520,6 +520,117 @@ fn login_with_invalid_magic_link_fails_without_writing_config() {
 
 #[test]
 #[serial]
+fn submit_claims_from_directory_analyses_everything_before_prompting() {
+    let (server, mut cmd, _home) = cli_with_server();
+    server.mock(|when, then| {
+        when.method(GET).path("/client/api/v3/settings/profile");
+        then.status(200).body(fixture("profile_response.json"));
+    });
+    server.mock(|when, then| {
+        when.method(POST).path("/chat/completions");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(fixture("llm_receipt_inference_response.json"));
+    });
+    let create = server.mock(|when, then| {
+        when.method(POST).path("/client/api/v2/claims");
+        then.status(201)
+            .body(fixture("create_claim_response_success.json"));
+    });
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    for name in ["a.jpg", "b.jpg"] {
+        std::fs::copy(make_fake_receipt().path(), dir.path().join(name)).expect("copy receipt");
+    }
+
+    // `cli_with_server` hands back a `std::process::Command`, which has no
+    // `write_stdin`, so the approvals are piped in from a file instead.
+    let mut approvals_file = tempfile::NamedTempFile::new().expect("tempfile");
+    std::io::Write::write_all(&mut approvals_file, b"y\ny\n").expect("write approvals");
+    let approvals = std::fs::File::open(approvals_file.path()).expect("open approvals");
+
+    let output = cmd
+        .env("FORMANATOR_ACCESS_TOKEN", TOKEN)
+        .arg("submit-claims-from-directory")
+        .arg("--directory")
+        .arg(dir.path())
+        .args([
+            "--openai-api-key",
+            "test-openai-key",
+            "--openai-base-url",
+            &server.base_url(),
+        ])
+        .stdin(approvals)
+        .assert()
+        .success()
+        .stdout(contains("Processed successfully: 2"))
+        .get_output()
+        .stdout
+        .clone();
+    create.assert_calls(2);
+
+    // No receipt is still waiting to be analysed by the time the first
+    // confirmation prompt is shown.
+    let stdout = String::from_utf8(output).expect("utf-8 stdout");
+    let last_analysis = stdout
+        .rfind("Analyzing receipt 2/2")
+        .expect("second receipt analysed up front");
+    let first_prompt = stdout
+        .find("Do you want to submit this claim?")
+        .expect("confirmation prompt shown");
+    assert!(
+        last_analysis < first_prompt,
+        "all receipts should be analysed before the first prompt, got:\n{stdout}"
+    );
+}
+
+#[test]
+#[serial]
+fn submit_claims_from_directory_aborts_early_when_the_llm_provider_rejects_the_request() {
+    let (server, mut cmd, _home) = cli_with_server();
+    server.mock(|when, then| {
+        when.method(GET).path("/client/api/v3/settings/profile");
+        then.status(200).body(fixture("profile_response.json"));
+    });
+    // An auth failure is not something the next receipt will recover from.
+    let inference = server.mock(|when, then| {
+        when.method(POST).path("/chat/completions");
+        then.status(401)
+            .header("content-type", "application/json")
+            .body(r#"{"error":{"message":"Incorrect API key provided","type":"invalid_request_error","code":"invalid_api_key"}}"#);
+    });
+    let create = server.mock(|when, then| {
+        when.method(POST).path("/client/api/v2/claims");
+        then.status(201)
+            .body(fixture("create_claim_response_success.json"));
+    });
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    for name in ["a.jpg", "b.jpg"] {
+        std::fs::copy(make_fake_receipt().path(), dir.path().join(name)).expect("copy receipt");
+    }
+
+    cmd.env("FORMANATOR_ACCESS_TOKEN", TOKEN)
+        .arg("submit-claims-from-directory")
+        .arg("--directory")
+        .arg(dir.path())
+        .args([
+            "--openai-api-key",
+            "test-openai-key",
+            "--openai-base-url",
+            &server.base_url(),
+        ])
+        .assert()
+        .failure()
+        .stderr(contains("Aborted before reviewing any claims"));
+
+    // The second receipt is never sent, and the user is never prompted.
+    inference.assert_calls(1);
+    create.assert_calls(0);
+}
+
+#[test]
+#[serial]
 fn submit_claims_from_directory_with_yolo_submits_without_prompting() {
     let (server, mut cmd, _home) = cli_with_server();
     server.mock(|when, then| {
