@@ -680,6 +680,54 @@ fn submit_claims_from_directory_with_yolo_submits_without_prompting() {
 
 #[test]
 #[serial]
+fn submit_claims_from_directory_with_yolo_and_dry_run_does_not_submit_or_move_receipt() {
+    let (server, mut cmd, _home) = cli_with_server();
+    server.mock(|when, then| {
+        when.method(GET).path("/client/api/v3/settings/profile");
+        then.status(200).body(fixture("profile_response.json"));
+    });
+    server.mock(|when, then| {
+        when.method(POST).path("/chat/completions");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(fixture("llm_receipt_inference_response.json"));
+    });
+    // No mock for the create endpoint; --dry-run must not POST.
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("receipt.jpg");
+    std::fs::copy(make_fake_receipt().path(), &receipt_path).expect("copy receipt");
+
+    cmd.env("FORMANATOR_ACCESS_TOKEN", TOKEN)
+        .arg("submit-claims-from-directory")
+        .arg("--directory")
+        .arg(dir.path())
+        .args([
+            "--openai-api-key",
+            "test-openai-key",
+            "--openai-base-url",
+            &server.base_url(),
+            "--yolo",
+            "--dry-run",
+        ])
+        .assert()
+        .success()
+        .stdout(contains("Dry run"))
+        .stdout(contains("Claim submitted successfully").not())
+        .stdout(contains("Moved processed receipt to").not())
+        .stdout(contains("Processed successfully: 1"));
+
+    // The receipt must remain in the input directory rather than being
+    // moved to the processed directory, since no claim was actually
+    // submitted during a dry run.
+    assert!(
+        receipt_path.exists(),
+        "receipt should not be moved during a dry run"
+    );
+}
+
+#[test]
+#[serial]
 fn submit_claim_with_yolo_submits_without_showing_the_confirmation_prompt() {
     let (server, mut cmd, _home) = cli_with_server();
     server.mock(|when, then| {
