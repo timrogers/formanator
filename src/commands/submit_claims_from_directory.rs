@@ -249,27 +249,32 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
                 };
                 let opts = claim_input_to_create_options(&claim, &access_token)?;
                 if args.dry_run {
-                    println!("{}", "Dry run: skipping claim submission.".yellow());
+                    println!(
+                        "{}",
+                        format!("Dry run: would submit claim for {filename}. Skipping claim submission and file move.")
+                            .yellow()
+                    );
                 } else {
                     create_claim(&opts)?;
-                }
-                println!(
-                    "{}",
-                    format!("✅ Claim submitted successfully for {filename}").green()
-                );
-                if let Err(e) = move_to_processed(receipt_file, &processed_directory) {
-                    eprintln!(
+                    println!(
                         "{}",
-                        format!(
-                            "Warning: Could not move file {} to processed directory: {e}",
-                            receipt_file.display()
-                        )
-                        .red()
+                        format!("✅ Claim submitted successfully for {filename}").green()
                     );
-                    eprintln!(
-                        "{}",
-                        "The claim was submitted successfully, but the file was not moved.".red()
-                    );
+                    if let Err(e) = move_to_processed(receipt_file, &processed_directory) {
+                        eprintln!(
+                            "{}",
+                            format!(
+                                "Warning: Could not move file {} to processed directory: {e}",
+                                receipt_file.display()
+                            )
+                            .red()
+                        );
+                        eprintln!(
+                            "{}",
+                            "The claim was submitted successfully, but the file was not moved."
+                                .red()
+                        );
+                    }
                 }
                 Ok(true)
             } else {
