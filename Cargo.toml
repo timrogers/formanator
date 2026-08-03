@@ -10,7 +10,7 @@ license = "MIT"
 readme = "README.md"
 categories = ["command-line-utilities"]
 keywords = ["forma", "joinforma", "benefits", "expenses", "claims"]
-rust-version = "1.94"
+rust-version = "1.97"
 
 [dependencies]
 anyhow = "1.0"
