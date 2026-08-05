@@ -56,7 +56,7 @@ mcp = [
 assert_cmd = "2.2"
 httpmock = "0.8"
 predicates = "3"
-serial_test = "3"
+serial_test = "4"
 
 [[bin]]
 name = "formanator"
