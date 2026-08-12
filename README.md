@@ -58,7 +58,7 @@ To get started, you'll need to connect Formanator to your Forma account:
 1. Run `formanator login`.
 2. Press Enter to open your browser to the Forma login page.
 3. Enter your email address and request a magic link.
-4. Copy the magic link from your email and paste it into the terminal.
+4. Copy the magic link from your email and paste it into the terminal. Formanator accepts either the full `joinforma.page.link` URL or its decoded `client.joinforma.com/auth/magic` target.
 5. You're logged in 🥳
 
 The access token is securely stored in the system Keychain on macOS. On other platforms, it's stored in `~/.formanator.toml`.

@@ -507,6 +507,29 @@ fn login_with_magic_link_writes_config_to_home() {
 
 #[test]
 #[serial]
+fn login_with_decoded_current_magic_link_writes_config_to_home() {
+    let (server, mut cmd, _home) = cli_with_server();
+    let mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/client/auth/v2/login/magic")
+            .query_param("id", "abc123")
+            .query_param("tk", "xyz789")
+            .query_param("return_token", "true");
+        then.status(200)
+            .body(fixture("magic_link_exchange_response.json"));
+    });
+
+    let link = "https://client.joinforma.com/auth/magic?id=abc123&tk=xyz789";
+
+    cmd.args(["login", "--magic-link", link])
+        .assert()
+        .success()
+        .stdout(contains("logged in"));
+    mock.assert();
+}
+
+#[test]
+#[serial]
 fn login_with_invalid_magic_link_fails_without_writing_config() {
     let (_server, mut cmd, home) = cli_with_server();
     cmd.args(["login", "--magic-link", "not a magic link"])

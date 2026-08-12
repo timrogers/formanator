@@ -14,23 +14,33 @@ const FORMA_LOGIN_URL: &str = "https://client.joinforma.com/login?type=magic";
 pub fn parse_emailed_forma_magic_link(input: &str) -> Result<(String, String)> {
     let parsed = Url::parse(input.trim()).context("Could not parse the input as a URL.")?;
 
-    if parsed.host_str() != Some("joinforma.page.link") {
-        bail!("Forma magic links are expected to have the hostname `joinforma.page.link`.");
-    }
     if parsed.scheme() != "https" {
         bail!("Forma magic links are expected to have the protocol `https:`.");
     }
 
-    let embedded = parsed
-        .query_pairs()
-        .find(|(k, _)| k == "link")
-        .map(|(_, v)| v.into_owned())
-        .ok_or_else(|| {
-            anyhow::anyhow!("Forma magic links are expected to have a `link` query parameter.")
-        })?;
+    let real_link = if parsed.host_str() == Some("joinforma.page.link") {
+        let embedded = parsed
+            .query_pairs()
+            .find(|(k, _)| k == "link")
+            .map(|(_, v)| v.into_owned())
+            .ok_or_else(|| {
+                anyhow::anyhow!("Forma magic links are expected to have a `link` query parameter.")
+            })?;
+        Url::parse(&embedded).context("The `link` query parameter is not a valid URL.")?
+    } else {
+        parsed
+    };
 
-    let real_link =
-        Url::parse(&embedded).context("The `link` query parameter is not a valid URL.")?;
+    let is_supported_target = matches!(
+        (real_link.host_str(), real_link.path()),
+        (Some("client.joinforma.com"), "/auth/magic")
+            | (Some("api.joinforma.com"), "/client/auth/v2/login/magic")
+    );
+    if real_link.scheme() != "https" || !is_supported_target {
+        bail!(
+            "Forma magic links are expected to target `https://client.joinforma.com/auth/magic`."
+        );
+    }
 
     let mut id = None;
     let mut tk = None;
@@ -128,8 +138,38 @@ mod tests {
     }
 
     #[test]
+    fn parses_a_current_emailed_magic_link() {
+        let inner = "https://client.joinforma.com/auth/magic?id=abc123&tk=xyz789";
+        let encoded = url::form_urlencoded::byte_serialize(inner.as_bytes()).collect::<String>();
+        let outer = format!("https://joinforma.page.link/?link={encoded}");
+
+        let (id, tk) = parse_emailed_forma_magic_link(&outer).expect("should parse");
+        assert_eq!(id, "abc123");
+        assert_eq!(tk, "xyz789");
+    }
+
+    #[test]
+    fn parses_a_decoded_current_magic_link() {
+        let link = "https://client.joinforma.com/auth/magic?id=abc123&tk=xyz789";
+
+        let (id, tk) = parse_emailed_forma_magic_link(link).expect("should parse");
+        assert_eq!(id, "abc123");
+        assert_eq!(tk, "xyz789");
+    }
+
+    #[test]
     fn rejects_links_with_the_wrong_host() {
         let result = parse_emailed_forma_magic_link("https://evil.example.com/?link=foo");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_wrappers_with_an_untrusted_inner_host() {
+        let inner = "https://evil.example.com/auth/magic?id=abc123&tk=xyz789";
+        let encoded = url::form_urlencoded::byte_serialize(inner.as_bytes()).collect::<String>();
+        let outer = format!("https://joinforma.page.link/?link={encoded}");
+
+        let result = parse_emailed_forma_magic_link(&outer);
         assert!(result.is_err());
     }
 
