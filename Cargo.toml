@@ -15,7 +15,7 @@ rust-version = "1.94"
 [dependencies]
 anyhow = "1.0"
 async-openai = { version = "0.41", default-features = false, features = ["rustls", "chat-completion"] }
-base64 = "0.22"
+base64 = "0.23"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 clap = { version = "4.5", features = ["derive", "env"] }
 colored = "3"
