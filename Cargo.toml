@@ -1,15 +1,15 @@
 [package]
 name = "formanator"
-version = "5.3.0"
+version = "5.4.0"
 edition = "2024"
 authors = ["Tim Rogers <me@timrogers.co.uk>"]
-description = "Submit Forma <https://joinforma.com> benefit claims from the command line, with support for AI-powered receipt analysis via OpenAI or the GitHub Copilot CLI"
-homepage = "https://github.com/timrogers/formanator-rust"
-repository = "https://github.com/timrogers/formanator-rust"
+description = "Submit Forma <https://joinforma.com> benefit claims from the command line and Model Context Protocol (MCP) clients, with support for AI-powered receipt analysis with an LLM or Jev"
+homepage = "https://github.com/timrogers/formanator"
+repository = "https://github.com/timrogers/formanator"
 license = "MIT"
 readme = "README.md"
 categories = ["command-line-utilities"]
-keywords = ["forma", "joinforma", "benefits", "expenses", "claims"]
+keywords = ["forma", "joinforma", "benefits", "expenses", "claims", "jev"]
 rust-version = "1.94"
 
 [dependencies]
