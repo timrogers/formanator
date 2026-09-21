@@ -264,14 +264,14 @@ impl FormanatorMcpServer {
 
 #[tool_handler]
 impl ServerHandler for FormanatorMcpServer {
-    fn get_info(&self) -> ServerInfo {
+    fn get_info(&self) -> ServerConfig {
         let mut implementation =
             Implementation::new(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
         implementation.title = Some("Formanator".to_owned());
         implementation.website_url =
             Some("https://github.com/timrogers/formanator-rust".to_owned());
 
-        let mut server = ServerInfo::new(ServerCapabilities::builder().enable_tools().build());
+        let mut server = ServerConfig::new(ServerCapabilities::builder().enable_tools().build());
         server.protocol_version = ProtocolVersion::V_2025_03_26;
         server.server_info = implementation;
         server.instructions = None;
