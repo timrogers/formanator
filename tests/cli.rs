@@ -97,6 +97,19 @@ fn unknown_subcommand_fails() {
 }
 
 #[test]
+fn submit_claim_help_lists_jev_category_options() {
+    Command::cargo_bin("formanator")
+        .unwrap()
+        .env("FORMANATOR_DISABLE_UPDATE_CHECK", "1")
+        .args(["submit-claim", "--help"])
+        .assert()
+        .success()
+        .stdout(contains("--category-provider"))
+        .stdout(contains("--typesafe-api-key"))
+        .stdout(contains("jev"));
+}
+
+#[test]
 fn generate_template_csv_writes_the_template_to_a_fresh_file() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("claims.csv");

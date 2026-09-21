@@ -1,11 +1,12 @@
 use anyhow::{Result, bail};
 use colored::Colorize;
 
+use crate::category_inference::{CategoryInferenceOptions, infer_category_and_benefit};
 use crate::claims::{ClaimInput, claim_input_to_create_options};
 use crate::cli::SubmitClaimArgs;
 use crate::config::resolve_access_token;
 use crate::forma::{create_claim, get_benefits_with_categories};
-use crate::llm::{infer_all_from_receipt, infer_category_and_benefit};
+use crate::llm::infer_all_from_receipt;
 use crate::prompt::prompt;
 use crate::verbose;
 
@@ -25,6 +26,8 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         openai_base_url,
         openai_model,
         copilot_cli_path,
+        category_provider,
+        typesafe_api_key,
         yolo,
         dry_run,
         ..
@@ -140,10 +143,14 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
             &merchant,
             &description,
             &benefits,
-            openai_api_key.as_deref(),
-            openai_base_url.as_deref(),
-            openai_model.as_deref(),
-            copilot_cli_path.as_deref(),
+            &CategoryInferenceOptions {
+                provider: category_provider,
+                typesafe_api_key: typesafe_api_key.as_deref(),
+                openai_api_key: openai_api_key.as_deref(),
+                openai_base_url: openai_base_url.as_deref(),
+                openai_model: openai_model.as_deref(),
+                copilot_cli_path: copilot_cli_path.as_deref(),
+            },
         )?;
 
         if !yolo {
@@ -172,7 +179,7 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         }
     } else {
         bail!(
-            "You must either provide all claim details (--benefit, --category, --amount, --merchant, --purchase-date, --description), or provide either: (1) just a receipt for full inference, or (2) all details except --benefit and --category to infer them. Inference uses the GitHub Copilot CLI by default, or OpenAI if --openai-api-key is set."
+            "You must either provide all claim details (--benefit, --category, --amount, --merchant, --purchase-date, --description), or provide either: (1) just a receipt for full LLM inference, or (2) all details except --benefit and --category to infer them using --category-provider."
         );
     }
 

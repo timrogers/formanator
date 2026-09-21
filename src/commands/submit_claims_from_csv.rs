@@ -1,11 +1,12 @@
 use anyhow::{Result, bail};
 use colored::Colorize;
 
+use crate::category_inference::{CategoryInferenceOptions, infer_category_and_benefit};
 use crate::claims::{claim_input_to_create_options, read_claims_from_csv};
 use crate::cli::SubmitClaimsFromCsvArgs;
 use crate::config::resolve_access_token;
 use crate::forma::{create_claim, get_benefits_with_categories};
-use crate::llm::{infer_all_from_receipt, infer_category_and_benefit};
+use crate::llm::infer_all_from_receipt;
 use crate::verbose;
 
 pub fn run(args: SubmitClaimsFromCsvArgs) -> Result<()> {
@@ -89,10 +90,14 @@ pub fn run(args: SubmitClaimsFromCsvArgs) -> Result<()> {
                     &claim.merchant,
                     &claim.description,
                     &benefits,
-                    args.openai_api_key.as_deref(),
-                    args.openai_base_url.as_deref(),
-                    args.openai_model.as_deref(),
-                    args.copilot_cli_path.as_deref(),
+                    &CategoryInferenceOptions {
+                        provider: args.category_provider,
+                        typesafe_api_key: args.typesafe_api_key.as_deref(),
+                        openai_api_key: args.openai_api_key.as_deref(),
+                        openai_base_url: args.openai_base_url.as_deref(),
+                        openai_model: args.openai_model.as_deref(),
+                        copilot_cli_path: args.copilot_cli_path.as_deref(),
+                    },
                 )?;
                 claim.benefit = inferred.benefit;
                 claim.category = inferred.category;
@@ -107,7 +112,7 @@ pub fn run(args: SubmitClaimsFromCsvArgs) -> Result<()> {
                 }
             } else {
                 anyhow::bail!(
-                    "To use LLM inference, a row must either leave every column except `receiptPath` blank (full receipt inference), or fill every column except `benefit` and `category` (benefit/category inference only)."
+                    "To use automatic inference, a row must either leave every column except `receiptPath` blank (full receipt inference), or fill every column except `benefit` and `category` (benefit/category inference only)."
                 );
             }
         })();

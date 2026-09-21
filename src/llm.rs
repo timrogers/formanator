@@ -25,6 +25,7 @@ use github_copilot_sdk::{CliProgram, Client as CopilotClient, ClientOptions};
 use regex::Regex;
 use serde::Deserialize;
 
+use crate::category_inference::InferredCategoryAndBenefit;
 use crate::forma::BenefitWithCategories;
 use crate::verbose::is_enabled as is_verbose;
 
@@ -358,12 +359,6 @@ fn user_text_and_image_message(
 // ---------------------------------------------------------------------------
 // Category / benefit inference (text-only)
 // ---------------------------------------------------------------------------
-
-#[derive(Debug)]
-pub struct InferredCategoryAndBenefit {
-    pub category: String,
-    pub benefit: String,
-}
 
 pub fn infer_category_and_benefit(
     merchant: &str,
