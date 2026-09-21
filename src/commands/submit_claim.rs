@@ -155,7 +155,8 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
 
         if !yolo {
             println!(
-                "The LLM inferred that you should claim using the {} benefit and {} category. If that seems right, hit Enter. If not, press Ctrl+C to end your session.",
+                "{} inferred that you should claim using the {} benefit and {} category. If that seems right, hit Enter. If not, press Ctrl+C to end your session.",
+                inferred.source.display_name(),
                 inferred.benefit.magenta(),
                 inferred.category.magenta(),
             );

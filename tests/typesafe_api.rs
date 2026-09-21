@@ -1,6 +1,8 @@
 //! Integration tests for Jev category inference through the TypeSafe API.
 
-use formanator::category_inference::{CategoryInferenceOptions, infer_category_and_benefit};
+use formanator::category_inference::{
+    CategoryInferenceOptions, CategoryInferenceSource, infer_category_and_benefit,
+};
 use formanator::cli::CategoryProvider;
 use formanator::forma::{Benefit, BenefitWithCategories, Category};
 use formanator::llm::set_llm_api_base;
@@ -135,6 +137,7 @@ fn jev_maps_a_choice_back_to_the_exact_benefit_and_category() {
     let inferred = result.inferred.expect("category should match");
     assert_eq!(inferred.benefit, "Flexible Reimbursement Account");
     assert_eq!(inferred.category, "University Program");
+    assert_eq!(inferred.source, CategoryInferenceSource::Jev);
 }
 
 #[test]
@@ -191,6 +194,7 @@ fn low_confidence_jev_result_falls_back_to_the_configured_llm() {
     llm_mock.assert();
     assert_eq!(result.benefit, "Flexible Reimbursement Account");
     assert_eq!(result.category, "University Program");
+    assert_eq!(result.source, CategoryInferenceSource::Llm);
 }
 
 #[test]

@@ -14,6 +14,22 @@ const DEFAULT_JEV_MIN_CONFIDENCE: f64 = 0.5;
 pub struct InferredCategoryAndBenefit {
     pub category: String,
     pub benefit: String,
+    pub source: CategoryInferenceSource,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CategoryInferenceSource {
+    Llm,
+    Jev,
+}
+
+impl CategoryInferenceSource {
+    pub fn display_name(self) -> &'static str {
+        match self {
+            Self::Llm => "The LLM",
+            Self::Jev => "Jev",
+        }
+    }
 }
 
 pub struct CategoryInferenceOptions<'a> {
@@ -60,4 +76,15 @@ pub fn infer_category_and_benefit(
         options.openai_model,
         options.copilot_cli_path,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn inference_sources_have_user_facing_names() {
+        assert_eq!(CategoryInferenceSource::Llm.display_name(), "The LLM");
+        assert_eq!(CategoryInferenceSource::Jev.display_name(), "Jev");
+    }
 }

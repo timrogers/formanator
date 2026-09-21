@@ -25,7 +25,7 @@ use github_copilot_sdk::{CliProgram, Client as CopilotClient, ClientOptions};
 use regex::Regex;
 use serde::Deserialize;
 
-use crate::category_inference::InferredCategoryAndBenefit;
+use crate::category_inference::{CategoryInferenceSource, InferredCategoryAndBenefit};
 use crate::forma::BenefitWithCategories;
 use crate::verbose::is_enabled as is_verbose;
 
@@ -431,6 +431,7 @@ pub fn infer_category_and_benefit(
     Ok(InferredCategoryAndBenefit {
         category: trimmed,
         benefit: matched.0.clone(),
+        source: CategoryInferenceSource::Llm,
     })
 }
 

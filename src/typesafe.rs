@@ -11,7 +11,7 @@ use reqwest::blocking::{Client, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::category_inference::InferredCategoryAndBenefit;
+use crate::category_inference::{CategoryInferenceSource, InferredCategoryAndBenefit};
 use crate::forma::BenefitWithCategories;
 use crate::verbose::is_enabled as is_verbose;
 
@@ -206,6 +206,7 @@ pub fn infer_category_and_benefit(
         Some(InferredCategoryAndBenefit {
             category: selected.category.clone(),
             benefit: selected.benefit.clone(),
+            source: CategoryInferenceSource::Jev,
         })
     };
 
