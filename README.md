@@ -67,7 +67,7 @@ The access token is securely stored in the system Keychain on macOS. On other pl
 
 Once a day, Formanator checks GitHub for a newer release. When one is available, it prints a yellow notice to stderr before running your command. The check is throttled by recording the last check timestamp in `~/.formanator.toml`, only considers releases that are at least 72 hours old, and times out after 2 seconds so it can't slow the CLI down. To disable the check entirely, set the `FORMANATOR_DISABLE_UPDATE_CHECK` environment variable to any value.
 
-### Configuring an LLM provider (optional, but recommended)
+### Configuring inference providers (optional, but recommended)
 
 When submitting a claim you can either provide every detail manually or let an LLM infer them. Three providers are supported:
 
@@ -76,6 +76,30 @@ When submitting a claim you can either provide every detail manually or let an L
 - **Other OpenAI-compatible inference providers** — any provider with an OpenAI-compatible API (e.g. Azure OpenAI, Ollama, or a local model server). Set `OPENAI_API_KEY` / `--openai-api-key` to your API key and `OPENAI_BASE_URL` / `--openai-base-url` to the provider's base URL (default: `https://api.openai.com/v1`). Set the model with `OPENAI_MODEL` / `--openai-model`.
 
 If both an OpenAI-compatible API key and the GitHub Copilot CLI are available, Formanator prefers the OpenAI-compatible API.
+
+#### Using Jev for benefit and category selection
+
+[Jev](https://docs.typesafe.ai/introduction) is TypeSafe's System One decision model. Instead of generating free-form text, it answers narrowly defined questions with typed choices and calibrated probabilities that application code can validate and act on.
+
+When you provide the amount, merchant, purchase date and description yourself, Jev can select the most appropriate benefit and category instead of using the configured LLM:
+
+```bash
+export TYPESAFE_API_KEY="..."
+
+formanator submit-claim \
+  --amount 1000 \
+  --merchant "Open University" \
+  --description "MBA tuition fee" \
+  --purchase-date 2026-09-20 \
+  --receipt-path receipt.pdf \
+  --category-provider jev
+```
+
+You can also pass the key with `--typesafe-api-key`, or set `FORMANATOR_CATEGORY_PROVIDER=jev` instead of passing `--category-provider` each time.
+
+Jev receives only the merchant, description and the valid benefit/category pairs returned by Forma. It does not receive receipt images. If Jev's confidence is below 0.5 or it determines that none of the available categories match, Formanator visibly falls back to the configured OpenAI-compatible provider or GitHub Copilot CLI. TypeSafe authentication and API errors are reported directly rather than silently falling back.
+
+Full inference from a receipt, including benefit and category selection, continues to use the configured vision-capable LLM.
 
 ### Submitting claims in bulk
 
@@ -98,7 +122,7 @@ formanator submit-claims-from-directory --directory input/ --yolo
 #### Manually submitting receipts using a CSV template
 
 1. Generate a template: `formanator generate-template-csv` (writes `claims.csv`).
-2. Fill in one row per claim. If you've configured an LLM, you can leave `benefit` and `category` blank to have them inferred from the other fields, or leave every column except `receiptPath` blank to have all claim details inferred from the receipt. Comma-separate paths in the `receiptPath` column to attach multiple receipts.
+2. Fill in one row per claim. You can leave `benefit` and `category` blank to have them inferred from the other fields, optionally using `--category-provider jev`, or leave every column except `receiptPath` blank to have all claim details inferred from the receipt using the configured LLM. Comma-separate paths in the `receiptPath` column to attach multiple receipts.
 3. Optionally validate up-front: `formanator validate-csv --input-path claims.csv`.
 4. Submit: `formanator submit-claims-from-csv --input-path claims.csv`.
 

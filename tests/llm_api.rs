@@ -11,6 +11,7 @@
 
 use std::io::Write;
 
+use formanator::category_inference::CategoryInferenceSource;
 use formanator::forma::{Benefit, BenefitWithCategories, Category};
 use formanator::llm::{infer_all_from_receipt, infer_category_and_benefit, set_llm_api_base};
 use httpmock::prelude::*;
@@ -155,6 +156,7 @@ fn infer_category_and_benefit_resolves_llm_response_to_benefit() {
     // resolver should map that back to the FRA benefit.
     assert_eq!(result.category, "University Program");
     assert_eq!(result.benefit, "Flexible Reimbursement Account");
+    assert_eq!(result.source, CategoryInferenceSource::Llm);
 }
 
 #[test]

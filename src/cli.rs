@@ -3,7 +3,16 @@
 
 use std::path::PathBuf;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+
+#[derive(Debug, Clone, Copy, Default, ValueEnum)]
+pub enum CategoryProvider {
+    /// Use the configured OpenAI-compatible provider or GitHub Copilot CLI.
+    #[default]
+    Llm,
+    /// Use TypeSafe's Jev model, falling back to the LLM when uncertain.
+    Jev,
+}
 
 #[derive(Debug, Parser)]
 #[command(
@@ -90,10 +99,10 @@ pub struct ListClaimsArgs {
 
 #[derive(Debug, clap::Args)]
 pub struct SubmitClaimArgs {
-    /// The benefit you are claiming for. Optional when using LLM inference.
+    /// The benefit you are claiming for. Optional when using automatic inference.
     #[arg(long)]
     pub benefit: Option<String>,
-    /// The category of the claim. Optional when using LLM inference.
+    /// The category of the claim. Optional when using automatic inference.
     #[arg(long)]
     pub category: Option<String>,
     /// The amount of the claim. Optional when using full receipt inference.
@@ -126,6 +135,17 @@ pub struct SubmitClaimArgs {
     /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
     #[arg(long, env = "COPILOT_CLI_PATH")]
     pub copilot_cli_path: Option<PathBuf>,
+    /// Provider used to infer benefit and category from merchant and description.
+    #[arg(
+        long,
+        env = "FORMANATOR_CATEGORY_PROVIDER",
+        value_enum,
+        default_value_t
+    )]
+    pub category_provider: CategoryProvider,
+    /// TypeSafe API key used when --category-provider=jev.
+    #[arg(long, env = "TYPESAFE_API_KEY")]
+    pub typesafe_api_key: Option<String>,
     /// Skip all confirmation prompts and submit claims without asking.
     #[arg(long)]
     pub yolo: bool,
@@ -164,6 +184,17 @@ pub struct SubmitClaimsFromCsvArgs {
     /// Path to the GitHub Copilot CLI binary, used for inference when no OpenAI API key is provided. Defaults to the `COPILOT_CLI_PATH` environment variable, otherwise auto-detected on your PATH.
     #[arg(long, env = "COPILOT_CLI_PATH")]
     pub copilot_cli_path: Option<PathBuf>,
+    /// Provider used to infer benefit and category from merchant and description.
+    #[arg(
+        long,
+        env = "FORMANATOR_CATEGORY_PROVIDER",
+        value_enum,
+        default_value_t
+    )]
+    pub category_provider: CategoryProvider,
+    /// TypeSafe API key used when --category-provider=jev.
+    #[arg(long, env = "TYPESAFE_API_KEY")]
+    pub typesafe_api_key: Option<String>,
     /// Run through the entire flow without actually submitting the claims.
     #[arg(long)]
     pub dry_run: bool,

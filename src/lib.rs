@@ -2,6 +2,7 @@
 //! together with [Clap](https://docs.rs/clap/) and the various subcommand
 //! handlers in [`commands`].
 
+pub mod category_inference;
 pub mod claims;
 pub mod cli;
 pub mod commands;
@@ -12,5 +13,6 @@ pub mod llm;
 #[cfg(feature = "mcp")]
 pub mod mcp;
 pub mod prompt;
+pub mod typesafe;
 pub mod update_check;
 pub mod verbose;
