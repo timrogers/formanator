@@ -1018,9 +1018,9 @@ dependencies = [
 
 [[package]]
 name = "github-copilot-sdk"
-version = "1.0.13"
+version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "119520fd3838c93f85b9650cc8aaab88bdf34611f851751c2466a39f20b44c5b"
+checksum = "453b38abf370fd296d036eb809f696af6b7d86cde1d2adf6d02f9d2c9b696239"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
