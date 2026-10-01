@@ -26,6 +26,7 @@ use regex::Regex;
 use serde::Deserialize;
 
 use crate::category_inference::{CategoryInferenceSource, InferredCategoryAndBenefit};
+use crate::currency::{convert_claim_amount, normalize_currency, validate_amount};
 use crate::forma::BenefitWithCategories;
 use crate::verbose::is_enabled as is_verbose;
 
@@ -442,6 +443,7 @@ pub fn infer_category_and_benefit(
 #[derive(Debug, Clone, Deserialize)]
 pub struct ReceiptInferenceResult {
     pub amount: String,
+    pub currency: String,
     pub merchant: String,
     #[serde(rename = "purchaseDate")]
     pub purchase_date: String,
@@ -486,7 +488,12 @@ pub fn infer_all_from_receipt(
         .collect();
     let valid_benefits: Vec<String> = benefits_with_categories
         .iter()
-        .map(|b| b.benefit.name.clone())
+        .map(|b| {
+            format!(
+                "{} (claim currency: {})",
+                b.benefit.name, b.benefit.remaining_amount_currency
+            )
+        })
         .collect();
 
     let valid_benefits_list = valid_benefits
@@ -501,7 +508,7 @@ pub fn infer_all_from_receipt(
         .join("\n");
 
     let prompt = format!(
-        "Your job is to analyze a receipt image and extract ALL required information for an expense claim. You must return a JSON object with the following fields:\n\n- amount: The total amount (e.g., \"25.99\")\n- merchant: The name of the merchant/store\n- purchaseDate: The date in YYYY-MM-DD format\n- description: A brief description of what was purchased\n- benefit: The most appropriate benefit category from the valid benefits list. Only benefits from the provided list are valid.\n- category: The most appropriate category from the valid categories list. Only categories from the provided list are valid.\n\nValid benefits:\n{valid_benefits_list}\n\nValid categories:\n{valid_categories_list}\n\nReturn ONLY a valid JSON object with these exact field names. Do not include any other text or formatting. Do not wrap the JSON object in a markdown code block syntax.",
+        "Your job is to analyze a receipt image and extract ALL required information for an expense claim. You must return a JSON object with the following fields:\n\n- amount: The ORIGINAL total paid in the receipt currency (e.g., \"25.99\"). Never convert this amount yourself.\n- currency: The receipt's three-letter ISO 4217 currency code (e.g., \"PLN\" or \"EUR\"). Identify it from the receipt, not the user's claim currency. If it is missing or ambiguous, return null rather than guessing.\n- merchant: The name of the merchant/store\n- purchaseDate: The actual purchase date in YYYY-MM-DD format, never today's date as a substitute\n- description: A brief description of what was purchased\n- benefit: The most appropriate benefit NAME from the valid benefits list, without the claim currency annotation. Only benefits from the provided list are valid.\n- category: The most appropriate category from the valid categories list. Only categories from the provided list are valid.\n\nValid benefits and their claim currencies:\n{valid_benefits_list}\n\nValid categories:\n{valid_categories_list}\n\nCheck whether the receipt currency differs from the selected benefit's claim currency. Always report the original currency and amount: Formanator will flag any mismatch, fetch a historical rate for the purchase date, convert the amount, and add a conversion note to the description. Do not invent a rate or silently relabel the amount.\n\nReturn ONLY a valid JSON object with these exact field names. Do not include any other text or formatting. Do not wrap the JSON object in a markdown code block syntax.",
     );
 
     let raw = match &provider {
@@ -525,8 +532,8 @@ pub fn infer_all_from_receipt(
         .trim_end_matches("```")
         .trim();
 
-    let parsed: ReceiptInferenceResult = serde_json::from_str(cleaned)
-        .with_context(|| format!("Failed to parse LLM response as JSON: {raw}"))?;
+    let mut parsed: ReceiptInferenceResult = serde_json::from_str(cleaned)
+        .with_context(|| format!("Failed to parse LLM response as JSON (an unambiguous receipt currency is required): {raw}"))?;
 
     // Validate benefit
     let matching_benefit = benefits_with_categories
@@ -552,19 +559,17 @@ pub fn infer_all_from_receipt(
     }
 
     let date_re = Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap();
-    if !date_re.is_match(&parsed.purchase_date) {
+    if !date_re.is_match(&parsed.purchase_date)
+        || chrono::NaiveDate::parse_from_str(&parsed.purchase_date, "%Y-%m-%d").is_err()
+    {
         bail!(
             "The LLM returned an invalid date format: {}. Expected YYYY-MM-DD.",
             parsed.purchase_date
         );
     }
-    let amount_re = Regex::new(r"^\d+(\.\d{1,2})?$").unwrap();
-    if !amount_re.is_match(&parsed.amount) {
-        bail!(
-            "The LLM returned an invalid amount format: {}. Expected up to two decimals.",
-            parsed.amount
-        );
-    }
+    parsed.currency = normalize_currency(&parsed.currency)?;
+    validate_amount(&parsed.amount, &parsed.currency)
+        .context("The LLM returned an invalid amount format")?;
     if parsed.merchant.trim().is_empty() {
         bail!("The LLM returned an empty merchant name.");
     }
@@ -572,6 +577,15 @@ pub fn infer_all_from_receipt(
         bail!("The LLM returned an empty description.");
     }
 
+    let target = normalize_currency(&matching_benefit.benefit.remaining_amount_currency)?;
+    (parsed.amount, parsed.description) = convert_claim_amount(
+        &parsed.amount,
+        &parsed.currency,
+        &target,
+        &parsed.purchase_date,
+        &parsed.description,
+    )?;
+    parsed.currency = target;
     Ok(parsed)
 }
 

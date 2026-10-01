@@ -4,7 +4,7 @@
     {
       "index": 0,
       "message": {
-        "content": "{\n  \"amount\": \"3670.00\",\n  \"merchant\": \"Open University\",\n  \"purchaseDate\": \"2026-03-24\",\n  \"description\": \"MBA module registration fee\",\n  \"benefit\": \"Flexible Reimbursement Account\",\n  \"category\": \"Personal University Program & class materials\"\n}",
+        "content": "{\n  \"amount\": \"3670.00\",\n  \"currency\": \"GBP\",\n  \"merchant\": \"Open University\",\n  \"purchaseDate\": \"2026-03-24\",\n  \"description\": \"MBA module registration fee\",\n  \"benefit\": \"Flexible Reimbursement Account\",\n  \"category\": \"Personal University Program & class materials\"\n}",
         "role": "assistant"
       },
       "finish_reason": "stop"

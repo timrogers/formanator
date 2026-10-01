@@ -108,6 +108,9 @@ pub struct SubmitClaimArgs {
     /// The amount of the claim. Optional when using full receipt inference.
     #[arg(long)]
     pub amount: Option<String>,
+    /// Receipt currency (ISO 4217, e.g. PLN). Defaults to your Forma currency for manual amounts.
+    #[arg(long, requires = "amount")]
+    pub currency: Option<String>,
     /// The name of the merchant. Optional when using full receipt inference.
     #[arg(long)]
     pub merchant: Option<String>,

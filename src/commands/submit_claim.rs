@@ -18,6 +18,7 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
         benefit,
         category,
         amount,
+        currency,
         merchant,
         purchase_date,
         description,
@@ -62,6 +63,7 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
             benefit,
             category,
             amount,
+            currency: currency.clone(),
             merchant,
             purchase_date,
             description,
@@ -101,7 +103,11 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
             "{}",
             "The LLM inferred the following details from your receipt:".cyan()
         );
-        println!("Amount: {}", inferred.amount.magenta());
+        println!(
+            "Amount: {} {}",
+            inferred.amount.magenta(),
+            inferred.currency
+        );
         println!("Merchant: {}", inferred.merchant.magenta());
         println!("Purchase Date: {}", inferred.purchase_date.magenta());
         println!("Description: {}", inferred.description.magenta());
@@ -119,6 +125,7 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
             benefit: inferred.benefit,
             category: inferred.category,
             amount: inferred.amount,
+            currency: Some(inferred.currency),
             merchant: inferred.merchant,
             purchase_date: inferred.purchase_date,
             description: inferred.description,
@@ -167,6 +174,7 @@ pub fn run(args: SubmitClaimArgs) -> Result<()> {
             benefit: inferred.benefit,
             category: inferred.category,
             amount,
+            currency,
             merchant,
             purchase_date,
             description,
