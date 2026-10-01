@@ -162,6 +162,18 @@ formanator submit-claim \
 
 Use `formanator benefits` and `formanator categories --benefit <benefit>` to discover the valid values.
 
+### Receipts in another currency
+
+Receipt inference extracts the original amount and currency, then converts foreign-currency purchases into the currency configured in your Forma profile. This works for single receipts, directory submissions and receipt-only CSV rows. The converted amount and a conversion note are shown before confirmation, unless you use `--yolo`.
+
+Formanator retrieves a historical reference rate for the purchase date from [Frankfurter](https://frankfurter.dev/); the model never supplies the rate or performs the conversion. The description records the original amount and currency, converted amount and currency, purchase date, rate, source and rate date. For example, at a rate of 1 PLN = 0.2352941176 EUR, a 4.25 PLN receipt becomes a 1.00 EUR claim. The actual amount depends on the purchase-date rate, not a fixed PLN/EUR ratio.
+
+Amounts are rounded to the destination currency's minor unit using decimal arithmetic. If no rate was published on the purchase date, the provider may return an earlier rate; its actual date is included in the note. Rates older than seven days or later than the purchase date are rejected. Missing or ambiguous receipt currencies, unsupported currency pairs and rate lookup failures stop that claim rather than submitting an unconverted amount. Same-currency claims do not need a rate lookup.
+
+For manual claims, pass the **original** amount with `--currency PLN`. CSVs can include an optional `currency` column, and the MCP `create_claim` tool accepts a `currency` parameter. Omit currency only when a manual amount is already in your Forma currency; existing CSV templates remain compatible. MCP clients are instructed to flag currency mismatches and pass the original amount and currency, not calculate their own conversion.
+
+Only currency codes and the purchase date are sent to Frankfurter, not receipts, amounts, merchant details or Forma credentials. To use a self-hosted compatible service, set `FORMANATOR_EXCHANGE_RATE_API_BASE`.
+
 ### Listing claims
 
 ```bash

@@ -52,8 +52,10 @@ pub struct ListClaimsParams {
 
 #[derive(serde::Deserialize, schemars::JsonSchema)]
 pub struct CreateClaimParams {
-    /// The amount to claim, e.g. "25.99".
+    /// The original receipt amount, e.g. "25.99"; do not convert it yourself.
     pub amount: String,
+    /// Receipt ISO 4217 currency (e.g. PLN); omit only if already in the user's Forma currency.
+    pub currency: Option<String>,
     /// The merchant / vendor name.
     pub merchant: String,
     /// The purchase date in YYYY-MM-DD format.
@@ -228,7 +230,7 @@ impl FormanatorMcpServer {
     }
 
     #[tool(
-        description = "Create a new Forma claim",
+        description = "Create a new Forma claim. Check the receipt currency against remainingAmountCurrency from list_benefits_with_categories. Always pass the original amount and receipt currency when known, flag any mismatch to the user, and do not guess exchange rates. Formanator converts to the user's Forma currency using a purchase-date historical rate and records the conversion in the description. If the receipt currency is ambiguous, ask the user before submitting.",
         annotations(
             destructive_hint = false,
             idempotent_hint = false,
@@ -244,21 +246,27 @@ impl FormanatorMcpServer {
             benefit: params.benefit,
             category: params.category,
             amount: params.amount,
+            currency: params.currency,
             merchant: params.merchant,
             purchase_date: params.purchase_date,
             description: params.description,
             receipt_path: params.receipt_path.into_iter().map(PathBuf::from).collect(),
         };
-        let opts = claim_input_to_create_options(&claim, &token)
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
-        match create_claim(&opts) {
-            Ok(()) => Ok(CallToolResult::success(vec![ContentBlock::text(
-                "Claim created successfully",
-            )])),
-            Err(e) => Ok(CallToolResult::error(vec![ContentBlock::text(
-                e.to_string(),
-            )])),
-        }
+        tokio::task::spawn_blocking(move || {
+            let opts = claim_input_to_create_options(&claim, &token)
+                .map_err(|e| McpError::internal_error(format!("{e:#}"), None))?;
+            match create_claim(&opts) {
+                Ok(()) => Ok(CallToolResult::success(vec![ContentBlock::text(format!(
+                    "Claim created successfully: {}. {}",
+                    opts.amount, opts.description
+                ))])),
+                Err(e) => Ok(CallToolResult::error(vec![ContentBlock::text(
+                    e.to_string(),
+                )])),
+            }
+        })
+        .await
+        .map_err(|e| McpError::internal_error(e.to_string(), None))?
     }
 }
 
@@ -397,6 +405,53 @@ mod tests {
 
         assert!(err.message.contains("login_start"), "{err:?}");
         assert!(err.message.contains("login_complete"), "{err:?}");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn create_claim_converts_original_currency_before_submission() {
+        let server = MockServer::start();
+        let _api_base = ApiBaseGuard::new(&server.base_url());
+        let _rates = EnvVarGuard::set("FORMANATOR_EXCHANGE_RATE_API_BASE", server.base_url());
+        server.mock(|when, then| {
+            when.method(GET).path("/client/api/v3/settings/profile");
+            then.status(200).body(
+                include_str!("../tests/fixtures/profile_response.json")
+                    .replace("\"GBP\"", "\"EUR\""),
+            );
+        });
+        let rate = server.mock(|when, then| {
+            when.method(GET)
+                .path("/v2/rate/PLN/EUR")
+                .query_param("date", "2026-09-27")
+                .header_missing("x-auth-token")
+                .header_missing("authorization");
+            then.status(200).json_body(serde_json::json!({
+                "date": "2026-09-25", "base": "PLN", "quote": "EUR", "rate": 0.2352941176
+            }));
+        });
+        let create = server.mock(|when, then| {
+            when.method(POST)
+                .path("/client/api/v2/claims")
+                .body_includes("name=\"amount\"\r\n\r\n1.00\r\n")
+                .body_includes("Currency conversion: 4.25 PLN -> 1.00 EUR");
+            then.status(201)
+                .json_body(serde_json::json!({"success": true}));
+        });
+        let receipt = tempfile::NamedTempFile::new().unwrap();
+        let params: CreateClaimParams = serde_json::from_value(serde_json::json!({
+            "benefit": "Learning", "category": "Book", "amount": "4.25", "currency": "PLN",
+            "merchant": "Bookshop", "purchaseDate": "2026-09-27", "description": "Book",
+            "receiptPath": [receipt.path().to_str().unwrap()]
+        }))
+        .unwrap();
+        let result = FormanatorMcpServer::new(Some(TOKEN.into()))
+            .create_claim(Parameters(params))
+            .await
+            .unwrap();
+        assert!(result_text(result).contains("Currency conversion: 4.25 PLN -> 1.00 EUR"));
+        rate.assert_calls(1);
+        create.assert_calls(1);
     }
 
     #[test]

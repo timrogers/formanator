@@ -800,3 +800,252 @@ fn submit_claim_with_yolo_submits_without_showing_the_confirmation_prompt() {
         .stdout(contains("Claim submitted successfully"));
     create.assert();
 }
+
+fn currency_inference_response(currency: serde_json::Value) -> String {
+    let mut response: serde_json::Value =
+        serde_json::from_str(&fixture("llm_receipt_inference_response.json")).unwrap();
+    response["choices"][0]["message"]["content"] = serde_json::json!({
+        "amount": "4.25",
+        "currency": currency,
+        "merchant": "Bookshop",
+        "purchaseDate": "2026-09-27",
+        "description": "Book",
+        "benefit": "Learning",
+        "category": "Book"
+    })
+    .to_string()
+    .into();
+    response.to_string()
+}
+
+#[test]
+fn foreign_currency_claims_submit_converted_amount_and_note_in_every_cli_flow() {
+    for mode in ["single", "directory", "csv", "manual", "manual-csv"] {
+        let (server, mut cmd, _home) = cli_with_server();
+        server.mock(|when, then| {
+            when.method(GET).path("/client/api/v3/settings/profile");
+            then.status(200)
+                .body(fixture("profile_response.json").replace("\"GBP\"", "\"EUR\""));
+        });
+        let inference = server.mock(|when, then| {
+            when.method(POST)
+                .path("/chat/completions")
+                .body_includes("Never convert this amount yourself")
+                .body_includes("claim currency: EUR")
+                .body_includes("three-letter ISO 4217");
+            then.status(200)
+                .body(currency_inference_response("PLN".into()));
+        });
+        let rate = server.mock(|when, then| {
+            when.method(GET)
+                .path("/v2/rate/PLN/EUR")
+                .query_param("date", "2026-09-27")
+                .header_missing("x-auth-token")
+                .header_missing("authorization");
+            then.status(200).json_body(serde_json::json!({
+                "date": "2026-09-25", "base": "PLN", "quote": "EUR", "rate": 0.2352941176
+            }));
+        });
+        let create = server.mock(|when, then| {
+            when.method(POST)
+                .path("/client/api/v2/claims")
+                .body_includes("name=\"amount\"\r\n\r\n1.00\r\n")
+                .body_includes("name=\"transaction_date\"\r\n\r\n2026-09-27\r\n")
+                .body_includes(
+                    "name=\"note\"\r\n\r\nBook\nCurrency conversion: 4.25 PLN -> 1.00 EUR",
+                )
+                .body_includes("Frankfurter, rate date 2026-09-25")
+                .body_includes("name=\"file[]\"");
+            then.status(201)
+                .json_body(serde_json::json!({"success": true}));
+        });
+        let dir = tempfile::tempdir().unwrap();
+        let receipt = dir.path().join("receipt.jpg");
+        std::fs::copy(make_fake_receipt().path(), &receipt).unwrap();
+        cmd.env("FORMANATOR_ACCESS_TOKEN", TOKEN)
+            .env("FORMANATOR_EXCHANGE_RATE_API_BASE", server.base_url());
+        match mode {
+            "single" | "manual" => {
+                cmd.args(["submit-claim", "--receipt-path"])
+                    .arg(&receipt)
+                    .arg("--yolo");
+            }
+            "directory" => {
+                cmd.args(["submit-claims-from-directory", "--directory"])
+                    .arg(dir.path())
+                    .arg("--yolo");
+            }
+            _ => {
+                let csv = dir.path().join("claims.csv");
+                let contents = if mode == "manual-csv" {
+                    format!(
+                        "benefit,category,merchant,amount,currency,description,purchaseDate,receiptPath\nLearning,Book,Bookshop,4.25,PLN,Book,2026-09-27,{}\n",
+                        receipt.display()
+                    )
+                } else {
+                    format!(
+                        "benefit,category,merchant,amount,description,purchaseDate,receiptPath\n,,,,,,{}\n",
+                        receipt.display()
+                    )
+                };
+                std::fs::write(&csv, contents).unwrap();
+                cmd.args(["submit-claims-from-csv", "--input-path"])
+                    .arg(csv);
+            }
+        }
+        if mode == "manual" {
+            cmd.args([
+                "--benefit",
+                "Learning",
+                "--category",
+                "Book",
+                "--amount",
+                "4.25",
+                "--currency",
+                "PLN",
+                "--merchant",
+                "Bookshop",
+                "--description",
+                "Book",
+                "--purchase-date",
+                "2026-09-27",
+            ]);
+        } else if mode != "manual-csv" {
+            cmd.args([
+                "--openai-api-key",
+                "test-openai-key",
+                "--openai-base-url",
+                &server.base_url(),
+            ]);
+        }
+        let result = cmd.assert().success();
+        if !mode.starts_with("manual") {
+            result.stdout(contains("Currency conversion: 4.25 PLN -> 1.00 EUR"));
+            inference.assert_calls(1);
+        } else {
+            inference.assert_calls(0);
+        }
+        rate.assert_calls(1);
+        create.assert_calls(1);
+    }
+}
+
+#[test]
+fn currency_lookup_failures_and_ambiguous_currencies_never_submit() {
+    for (currency, status, body, error) in [
+        (
+            serde_json::Value::Null,
+            200,
+            "{}",
+            "receipt currency is required",
+        ),
+        ("".into(), 200, "{}", "ISO 4217"),
+        ("PLN".into(), 503, "unavailable", "Could not fetch PLN/EUR"),
+        ("XXX".into(), 422, "unsupported", "Could not fetch XXX/EUR"),
+        ("PLN".into(), 200, "{}", "Invalid exchange rate response"),
+        (
+            "PLN".into(),
+            200,
+            r#"{"date":"2026-09-28","base":"PLN","quote":"EUR","rate":0.23}"#,
+            "unexpected currency, date, or value",
+        ),
+    ] {
+        let (server, mut cmd, _home) = cli_with_server();
+        server.mock(|when, then| {
+            when.method(GET).path("/client/api/v3/settings/profile");
+            then.status(200)
+                .body(fixture("profile_response.json").replace("\"GBP\"", "\"EUR\""));
+        });
+        server.mock(|when, then| {
+            when.method(POST).path("/chat/completions");
+            then.status(200)
+                .body(currency_inference_response(currency.clone()));
+        });
+        let rate = server.mock(|when, then| {
+            when.method(GET).path_includes("/v2/rate/");
+            then.status(status).body(body);
+        });
+        let create = server.mock(|when, then| {
+            when.method(POST).path("/client/api/v2/claims");
+            then.status(201)
+                .json_body(serde_json::json!({"success": true}));
+        });
+        let receipt = make_fake_receipt();
+        cmd.env("FORMANATOR_ACCESS_TOKEN", TOKEN)
+            .env("FORMANATOR_EXCHANGE_RATE_API_BASE", server.base_url())
+            .args(["submit-claim", "--receipt-path"])
+            .arg(receipt.path())
+            .args([
+                "--openai-api-key",
+                "test-openai-key",
+                "--openai-base-url",
+                &server.base_url(),
+                "--yolo",
+            ])
+            .assert()
+            .failure()
+            .stderr(contains(error));
+        create.assert_calls(0);
+        rate.assert_calls(usize::from(currency == "PLN" || currency == "XXX"));
+    }
+}
+
+#[test]
+fn same_currency_skips_rates_and_foreign_currency_dry_run_does_not_submit() {
+    for currency in ["EUR", "PLN"] {
+        let (server, mut cmd, _home) = cli_with_server();
+        server.mock(|when, then| {
+            when.method(GET).path("/client/api/v3/settings/profile");
+            then.status(200)
+                .body(fixture("profile_response.json").replace("\"GBP\"", "\"EUR\""));
+        });
+        server.mock(|when, then| {
+            when.method(POST).path("/chat/completions");
+            then.status(200)
+                .body(currency_inference_response(currency.into()));
+        });
+        let rate = server.mock(|when, then| {
+            when.method(GET)
+                .path("/v2/rate/PLN/EUR")
+                .query_param("date", "2026-09-27");
+            then.status(200).json_body(serde_json::json!({
+                "date": "2026-09-25", "base": "PLN", "quote": "EUR", "rate": 0.2352941176
+            }));
+        });
+        let create = server.mock(|when, then| {
+            when.method(POST)
+                .path("/client/api/v2/claims")
+                .body_includes("name=\"amount\"\r\n\r\n4.25\r\n")
+                .body_includes("name=\"note\"\r\n\r\nBook\r\n");
+            then.status(201)
+                .json_body(serde_json::json!({"success": true}));
+        });
+        let receipt = make_fake_receipt();
+        cmd.env("FORMANATOR_ACCESS_TOKEN", TOKEN)
+            .env("FORMANATOR_EXCHANGE_RATE_API_BASE", server.base_url())
+            .args(["submit-claim", "--receipt-path"])
+            .arg(receipt.path())
+            .args([
+                "--openai-api-key",
+                "test-openai-key",
+                "--openai-base-url",
+                &server.base_url(),
+                "--yolo",
+            ]);
+        if currency == "PLN" {
+            cmd.arg("--dry-run")
+                .assert()
+                .success()
+                .stdout(contains("Currency conversion: 4.25 PLN -> 1.00 EUR"))
+                .stdout(contains("Dry run"));
+            create.assert_calls(0);
+            rate.assert_calls(1);
+        } else {
+            cmd.assert()
+                .success()
+                .stdout(contains("Currency conversion").not());
+            create.assert_calls(1);
+            rate.assert_calls(0);
+        }
+    }
+}

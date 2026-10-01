@@ -353,6 +353,13 @@ pub fn get_categories_for_benefit_name(
     access_token: &str,
     benefit_name: &str,
 ) -> Result<Vec<Category>> {
+    Ok(get_benefit_with_categories(access_token, benefit_name)?.categories)
+}
+
+pub fn get_benefit_with_categories(
+    access_token: &str,
+    benefit_name: &str,
+) -> Result<BenefitWithCategories> {
     let profile = get_profile(access_token)?;
 
     let employee_wallet = profile
@@ -398,7 +405,15 @@ pub fn get_categories_for_benefit_name(
             }
         }
     }
-    Ok(out)
+    Ok(BenefitWithCategories {
+        benefit: Benefit {
+            id: benefit_id,
+            name: benefit_name.to_string(),
+            remaining_amount: employee_wallet.amount,
+            remaining_amount_currency: profile.data.employee.settings.currency,
+        },
+        categories: out,
+    })
 }
 
 pub fn get_benefits_with_categories(access_token: &str) -> Result<Vec<BenefitWithCategories>> {
