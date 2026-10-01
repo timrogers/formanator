@@ -556,13 +556,25 @@ fn login_with_invalid_magic_link_fails_without_writing_config() {
 
 #[test]
 #[serial]
-fn submit_claims_from_directory_analyses_everything_before_prompting() {
+fn submit_claims_from_directory_finishes_analysis_and_review_before_sending() {
+    use std::io::{BufRead, BufReader, Write};
+    use std::process::Stdio;
+    use std::time::Duration;
+
+    struct RunningCli(std::process::Child);
+    impl Drop for RunningCli {
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
+
     let (server, mut cmd, _home) = cli_with_server();
-    server.mock(|when, then| {
+    let profile = server.mock(|when, then| {
         when.method(GET).path("/client/api/v3/settings/profile");
         then.status(200).body(fixture("profile_response.json"));
     });
-    server.mock(|when, then| {
+    let inference = server.mock(|when, then| {
         when.method(POST).path("/chat/completions");
         then.status(200)
             .header("content-type", "application/json")
@@ -575,42 +587,67 @@ fn submit_claims_from_directory_analyses_everything_before_prompting() {
     });
 
     let dir = tempfile::tempdir().expect("tempdir");
-    for name in ["a.jpg", "b.jpg"] {
+    for name in ["a.jpg", "b.jpg", "c.jpg"] {
         std::fs::copy(make_fake_receipt().path(), dir.path().join(name)).expect("copy receipt");
     }
 
-    // `cli_with_server` hands back a `std::process::Command`, which has no
-    // `write_stdin`, so the approvals are piped in from a file instead.
-    let mut approvals_file = tempfile::NamedTempFile::new().expect("tempfile");
-    std::io::Write::write_all(&mut approvals_file, b"y\ny\n").expect("write approvals");
-    let approvals = std::fs::File::open(approvals_file.path()).expect("open approvals");
-
-    let output = cmd
-        .env("FORMANATOR_ACCESS_TOKEN", TOKEN)
-        .arg("submit-claims-from-directory")
-        .arg("--directory")
-        .arg(dir.path())
-        .args([
-            "--openai-api-key",
-            "test-openai-key",
-            "--openai-base-url",
-            &server.base_url(),
-        ])
-        .stdin(approvals)
-        .assert()
-        .success()
-        .stdout(contains("Processed successfully: 2"))
-        .get_output()
-        .stdout
-        .clone();
+    let mut child = RunningCli(
+        cmd.env("FORMANATOR_ACCESS_TOKEN", TOKEN)
+            .arg("submit-claims-from-directory")
+            .arg("--directory")
+            .arg(dir.path())
+            .args([
+                "--openai-api-key",
+                "test-openai-key",
+                "--openai-base-url",
+                &server.base_url(),
+            ])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("start CLI"),
+    );
+    let mut stdin = child.0.stdin.take().expect("stdin");
+    let stdout = child.0.stdout.take().expect("stdout");
+    let (prompt_tx, prompt_rx) = std::sync::mpsc::channel();
+    let reader = std::thread::spawn(move || {
+        let mut output = String::new();
+        for line in BufReader::new(stdout).lines() {
+            let line = line.expect("read stdout");
+            if line.contains("Do you want to submit this claim?") {
+                prompt_tx.send(()).expect("send prompt");
+            }
+            output.push_str(&line);
+            output.push('\n');
+        }
+        output
+    });
+    let mut profile_calls = None;
+    for answer in ["y", "n", "yes"] {
+        prompt_rx
+            .recv_timeout(Duration::from_secs(30))
+            .expect("next prompt without waiting for a submission");
+        inference.assert_calls(3);
+        create.assert_calls(0);
+        let expected = *profile_calls.get_or_insert_with(|| profile.calls());
+        profile.assert_calls(expected);
+        writeln!(stdin, "{answer}").expect("answer prompt");
+    }
+    drop(stdin);
+    assert!(child.0.wait().expect("wait for CLI").success());
+    let stdout = reader.join().expect("stdout reader");
     create.assert_calls(2);
+    assert!(stdout.contains("Processed successfully: 2"), "{stdout}");
+    assert!(stdout.contains("Skipped: 1"), "{stdout}");
+    for name in ["a.jpg", "c.jpg"] {
+        assert!(!dir.path().join(name).exists());
+        assert!(dir.path().join("processed").join(name).exists());
+    }
+    assert!(dir.path().join("b.jpg").exists());
 
-    // No receipt is still waiting to be analysed by the time the first
-    // confirmation prompt is shown.
-    let stdout = String::from_utf8(output).expect("utf-8 stdout");
     let last_analysis = stdout
-        .rfind("Analyzing receipt 2/2")
-        .expect("second receipt analysed up front");
+        .rfind("Analyzing receipt 3/3")
+        .expect("last receipt analysed up front");
     let first_prompt = stdout
         .find("Do you want to submit this claim?")
         .expect("confirmation prompt shown");
@@ -618,6 +655,84 @@ fn submit_claims_from_directory_analyses_everything_before_prompting() {
         last_analysis < first_prompt,
         "all receipts should be analysed before the first prompt, got:\n{stdout}"
     );
+    assert!(
+        stdout.rfind("Do you want to submit this claim?").unwrap()
+            < stdout.find("Submitting claim 1/2").unwrap(),
+        "{stdout}"
+    );
+}
+
+#[test]
+#[serial]
+fn submit_claims_from_directory_keeps_rejected_and_failed_receipts() {
+    for approve in [false, true] {
+        let (server, mut cmd, _home) = cli_with_server();
+        server.mock(|when, then| {
+            when.method(GET).path("/client/api/v3/settings/profile");
+            then.status(200).body(fixture("profile_response.json"));
+        });
+        server.mock(|when, then| {
+            when.method(POST).path("/chat/completions");
+            then.status(200)
+                .header("content-type", "application/json")
+                .body(fixture("llm_receipt_inference_response.json"));
+        });
+        let failed = server.mock(|when, then| {
+            when.method(POST)
+                .path("/client/api/v2/claims")
+                .body_includes("filename=\"a.jpg\"");
+            then.status(400)
+                .body(fixture("create_claim_response_unsuccessful.json"));
+        });
+        let succeeded = server.mock(|when, then| {
+            when.method(POST)
+                .path("/client/api/v2/claims")
+                .body_includes("filename=\"b.jpg\"");
+            then.status(201)
+                .body(fixture("create_claim_response_success.json"));
+        });
+        let dir = tempfile::tempdir().expect("tempdir");
+        for name in ["a.jpg", "b.jpg"] {
+            std::fs::copy(make_fake_receipt().path(), dir.path().join(name)).expect("receipt");
+        }
+        let mut answers = tempfile::NamedTempFile::new().expect("answers");
+        std::io::Write::write_all(&mut answers, if approve { b"y\ny\n" } else { b"n\nn\n" })
+            .expect("write answers");
+
+        let result = cmd
+            .env("FORMANATOR_ACCESS_TOKEN", TOKEN)
+            .args(["submit-claims-from-directory", "--directory"])
+            .arg(dir.path())
+            .args([
+                "--openai-api-key",
+                "test-openai-key",
+                "--openai-base-url",
+                &server.base_url(),
+            ])
+            .stdin(std::fs::File::open(answers.path()).expect("open answers"))
+            .assert()
+            .success();
+        assert!(dir.path().join("a.jpg").exists());
+        if approve {
+            result
+                .stdout(contains("Processed successfully: 1"))
+                .stdout(contains("Skipped: 1"))
+                .stderr(contains("Error processing a.jpg"));
+            failed.assert_calls(1);
+            succeeded.assert_calls(1);
+            assert!(!dir.path().join("b.jpg").exists());
+            assert!(dir.path().join("processed/b.jpg").exists());
+        } else {
+            result
+                .stdout(contains("Processed successfully: 0"))
+                .stdout(contains("Skipped: 2"))
+                .stdout(contains("Submitting claim").not());
+            failed.assert_calls(0);
+            succeeded.assert_calls(0);
+            assert!(dir.path().join("b.jpg").exists());
+            assert!(!dir.path().join("processed").exists());
+        }
+    }
 }
 
 #[test]

@@ -111,9 +111,9 @@ formanator submit-claims-from-directory --directory input/
 
 All `.jpg`, `.jpeg`, `.png`, `.pdf` and `.heic` receipts in the directory will be analysed by the LLM. You'll be asked to confirm the inferred claim details for each receipt before it's submitted, and successfully-submitted receipts are moved into a `processed/` subdirectory.
 
-Every receipt is analysed up front, with a progress bar, so you can walk away while that runs and then confirm all of them back to back. If the LLM provider itself can't be reached — bad API key, missing model, Copilot CLI that won't start — Formanator stops straight away instead of failing its way through the rest of the directory.
+Every receipt is analysed up front, with a progress bar, so you can walk away while that runs and then confirm all of them back to back. Approved claims are queued until every receipt has been reviewed, with no network requests between confirmation prompts, then submitted in a separate loop with a running count. Rejected receipts and claims that fail to submit stay in the input directory. If the LLM provider itself can't be reached — bad API key, missing model, Copilot CLI that won't start — Formanator stops straight away instead of failing its way through the rest of the directory.
 
-If you trust the LLM and don't want to confirm anything, add `--yolo` to submit every receipt as soon as it's been analysed:
+If you trust the LLM and don't want to confirm anything, add `--yolo` to skip review and submit all successfully analysed receipts:
 
 ```bash
 formanator submit-claims-from-directory --directory input/ --yolo
