@@ -75,6 +75,14 @@ fn finish_progress() {
     }
 }
 
+fn notify_completion(output: &mut impl Write, interactive: bool) -> std::io::Result<()> {
+    if interactive {
+        output.write_all(b"\x07")?;
+        output.flush()?;
+    }
+    Ok(())
+}
+
 fn move_to_processed(source: &Path, processed_dir: &Path) -> Result<()> {
     fs::create_dir_all(processed_dir)?;
     let filename = source
@@ -308,12 +316,33 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
             .blue()
         );
     }
+    let stdout = std::io::stdout();
+    if let Err(error) = notify_completion(&mut stdout.lock(), stdout.is_terminal()) {
+        eprintln!("Warning: Could not send the batch completion alert: {error}");
+    }
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{PROGRESS_WIDTH, progress_line};
+    use super::{PROGRESS_WIDTH, notify_completion, progress_line};
+
+    #[test]
+    fn completion_alert_rings_once_only_for_terminal_output() {
+        let mut terminal = Vec::new();
+        notify_completion(&mut terminal, true).unwrap();
+        assert_eq!(terminal, b"\x07");
+
+        let mut pipe = Vec::new();
+        notify_completion(&mut pipe, false).unwrap();
+        assert!(pipe.is_empty());
+    }
+
+    #[test]
+    fn completion_alert_reports_output_errors() {
+        let mut output = std::io::Cursor::new([0u8; 0]);
+        assert!(notify_completion(&mut output, true).is_err());
+    }
 
     fn blocks(line: &str) -> (usize, usize) {
         (
