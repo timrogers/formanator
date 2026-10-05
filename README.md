@@ -67,6 +67,10 @@ The access token is securely stored in the system Keychain on macOS. On other pl
 
 Once a day, Formanator checks GitHub for a newer release. When one is available, it prints a yellow notice to stderr before running your command. The check is throttled by recording the last check timestamp in `~/.formanator.toml`, only considers releases that are at least 72 hours old, and times out after 2 seconds so it can't slow the CLI down. To disable the check entirely, set the `FORMANATOR_DISABLE_UPDATE_CHECK` environment variable to any value.
 
+### Directory batch completion alerts
+
+`submit-claims-from-directory` rings the terminal bell once, after every receipt has been handled and the final summary is printed. This includes dry runs and batches containing skipped or failed claims; the alert means the batch has finished, not that every claim succeeded. Empty directories and early aborts do not ring, and redirected output stays silent. Whether the bell makes a sound or displays a notification depends on your terminal settings.
+
 ### Configuring inference providers (optional, but recommended)
 
 When submitting a claim you can either provide every detail manually or let an LLM infer them. Three providers are supported:
