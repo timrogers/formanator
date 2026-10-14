@@ -317,7 +317,9 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
         );
     }
     let stdout = std::io::stdout();
-    if let Err(error) = notify_completion(&mut stdout.lock(), stdout.is_terminal()) {
+    if let Err(error) = notify_completion(&mut stdout.lock(), stdout.is_terminal())
+        && verbose::is_enabled()
+    {
         eprintln!("Warning: Could not send the batch completion alert: {error}");
     }
     Ok(())
