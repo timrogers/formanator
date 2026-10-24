@@ -613,7 +613,8 @@ fn convert_to_image_if_needed(receipt_path: &Path) -> Result<PathBuf> {
 
     let status = Command::new("gm")
         .args(["convert", "-density", "100", "-resize", "2000x2000"])
-        .arg(format!("{}[0]", receipt_path.display()))
+        .arg(receipt_path)
+        .arg("-append")
         .arg(&output)
         .status();
 
