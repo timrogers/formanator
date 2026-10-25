@@ -233,6 +233,7 @@ fn infer_all_from_receipt_parses_structured_json_response() {
 
     mock.assert();
     assert_eq!(result.amount, "3670.00");
+    assert_eq!(result.currency, "GBP");
     assert_eq!(result.merchant, "Open University");
     assert_eq!(result.purchase_date, "2026-03-24");
     assert_eq!(result.description, "MBA module registration fee");
@@ -251,6 +252,7 @@ fn infer_all_from_receipt_rejects_invalid_date_format() {
     // `purchaseDate` is not YYYY-MM-DD. The validator must reject it.
     let inner = serde_json::json!({
         "amount": "10.00",
+        "currency": "GBP",
         "merchant": "Open University",
         "purchaseDate": "24/03/2026",
         "description": "MBA module registration fee",
@@ -296,7 +298,7 @@ fn infer_all_from_receipt_strips_markdown_code_fences() {
     // Some models wrap the JSON in ```json ... ``` despite the prompt.
     // The parser is expected to strip those fences.
     let (server, _guard) = llm_server();
-    let inner = "```json\n{\n  \"amount\": \"42.00\",\n  \"merchant\": \"Open University\",\n  \"purchaseDate\": \"2026-01-15\",\n  \"description\": \"Course fee\",\n  \"benefit\": \"Flexible Reimbursement Account\",\n  \"category\": \"University Program\"\n}\n```";
+    let inner = "```json\n{\n  \"amount\": \"42.00\",\n  \"currency\": \"GBP\",\n  \"merchant\": \"Open University\",\n  \"purchaseDate\": \"2026-01-15\",\n  \"description\": \"Course fee\",\n  \"benefit\": \"Flexible Reimbursement Account\",\n  \"category\": \"University Program\"\n}\n```";
     let body = serde_json::json!({
         "id": "chatcmpl-test-fenced",
         "object": "chat.completion",

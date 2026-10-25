@@ -66,7 +66,7 @@ pub fn run(args: SubmitClaimsFromCsvArgs) -> Result<()> {
                     args.openai_model.as_deref(),
                     args.copilot_cli_path.as_deref(),
                 )?;
-                println!("Inferred amount: {}", inferred.amount);
+                println!("Inferred amount: {} {}", inferred.amount, inferred.currency);
                 println!("Inferred merchant: {}", inferred.merchant);
                 println!("Inferred purchase date: {}", inferred.purchase_date);
                 println!("Inferred description: {}", inferred.description);
@@ -75,6 +75,7 @@ pub fn run(args: SubmitClaimsFromCsvArgs) -> Result<()> {
                 claim.benefit = inferred.benefit;
                 claim.category = inferred.category;
                 claim.amount = inferred.amount;
+                claim.currency = Some(inferred.currency);
                 claim.merchant = inferred.merchant;
                 claim.purchase_date = inferred.purchase_date;
                 claim.description = inferred.description;

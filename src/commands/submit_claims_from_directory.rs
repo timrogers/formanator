@@ -218,7 +218,11 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
             let inferred = inferred?;
 
             println!("{}", "\nInferred claim details:".green());
-            println!("  Amount: {}", inferred.amount.yellow());
+            println!(
+                "  Amount: {} {}",
+                inferred.amount.yellow(),
+                inferred.currency
+            );
             println!("  Merchant: {}", inferred.merchant.yellow());
             println!("  Purchase Date: {}", inferred.purchase_date.yellow());
             println!("  Description: {}", inferred.description.yellow());
@@ -242,6 +246,7 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
                     benefit: inferred.benefit,
                     category: inferred.category,
                     amount: inferred.amount,
+                    currency: Some(inferred.currency),
                     merchant: inferred.merchant,
                     purchase_date: inferred.purchase_date,
                     description: inferred.description,

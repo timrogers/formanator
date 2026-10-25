@@ -7,6 +7,7 @@ pub mod claims;
 pub mod cli;
 pub mod commands;
 pub mod config;
+pub mod currency;
 pub mod forma;
 pub mod keychain;
 pub mod llm;
