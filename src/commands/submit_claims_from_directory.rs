@@ -196,6 +196,7 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
 
     let mut processed = 0usize;
     let mut skipped = 0usize;
+    let mut approved_claims = Vec::new();
 
     for (index, (receipt_file, inferred)) in receipt_files.iter().zip(analyzed).enumerate() {
         let filename = receipt_file
@@ -207,14 +208,14 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
         println!(
             "{}",
             format!(
-                "--- Processing receipt {}/{}: {filename} ---",
+                "--- Reviewing receipt {}/{}: {filename} ---",
                 index + 1,
                 receipt_files.len()
             )
             .cyan()
         );
 
-        let outcome = (|| -> Result<bool> {
+        let outcome = (|| -> Result<Option<ClaimInput>> {
             let inferred = inferred?;
 
             println!("{}", "\nInferred claim details:".green());
@@ -237,8 +238,7 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
             };
 
             if approved {
-                println!("Submitting claim...");
-                let claim = ClaimInput {
+                Ok(Some(ClaimInput {
                     benefit: inferred.benefit,
                     category: inferred.category,
                     amount: inferred.amount,
@@ -246,46 +246,64 @@ pub fn run(args: SubmitClaimsFromDirectoryArgs) -> Result<()> {
                     purchase_date: inferred.purchase_date,
                     description: inferred.description,
                     receipt_path: vec![receipt_file.clone()],
-                };
-                let opts = claim_input_to_create_options(&claim, &access_token)?;
-                if args.dry_run {
-                    println!(
-                        "{}",
-                        format!("Dry run: would submit claim for {filename}. Skipping claim submission and file move.")
-                            .yellow()
-                    );
-                } else {
-                    create_claim(&opts)?;
-                    println!(
-                        "{}",
-                        format!("✅ Claim submitted successfully for {filename}").green()
-                    );
-                    if let Err(e) = move_to_processed(receipt_file, &processed_directory) {
-                        eprintln!(
-                            "{}",
-                            format!(
-                                "Warning: Could not move file {} to processed directory: {e}",
-                                receipt_file.display()
-                            )
-                            .red()
-                        );
-                        eprintln!(
-                            "{}",
-                            "The claim was submitted successfully, but the file was not moved."
-                                .red()
-                        );
-                    }
-                }
-                Ok(true)
+                }))
             } else {
                 println!("{}", format!("Skipped {filename}").yellow());
-                Ok(false)
+                Ok(None)
             }
         })();
 
         match outcome {
-            Ok(true) => processed += 1,
-            Ok(false) => skipped += 1,
+            Ok(Some(claim)) => approved_claims.push((receipt_file, filename, claim)),
+            Ok(None) => skipped += 1,
+            Err(e) => {
+                eprintln!("{}", format!("❌ Error processing {filename}: {e:#}").red());
+                skipped += 1;
+            }
+        }
+    }
+
+    let total_approved = approved_claims.len();
+    for (index, (receipt_file, filename, claim)) in approved_claims.into_iter().enumerate() {
+        println!();
+        println!(
+            "Submitting claim {}/{}: {filename}...",
+            index + 1,
+            total_approved
+        );
+        let outcome = (|| -> Result<()> {
+            let opts = claim_input_to_create_options(&claim, &access_token)?;
+            if args.dry_run {
+                println!(
+                    "{}",
+                    format!("Dry run: would submit claim for {filename}. Skipping claim submission and file move.")
+                        .yellow()
+                );
+            } else {
+                create_claim(&opts)?;
+                println!(
+                    "{}",
+                    format!("✅ Claim submitted successfully for {filename}").green()
+                );
+                if let Err(e) = move_to_processed(receipt_file, &processed_directory) {
+                    eprintln!(
+                        "{}",
+                        format!(
+                            "Warning: Could not move file {} to processed directory: {e}",
+                            receipt_file.display()
+                        )
+                        .red()
+                    );
+                    eprintln!(
+                        "{}",
+                        "The claim was submitted successfully, but the file was not moved.".red()
+                    );
+                }
+            }
+            Ok(())
+        })();
+        match outcome {
+            Ok(()) => processed += 1,
             Err(e) => {
                 eprintln!("{}", format!("❌ Error processing {filename}: {e:#}").red());
                 skipped += 1;
