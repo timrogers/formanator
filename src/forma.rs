@@ -66,9 +66,13 @@ fn send_request(
     builder: reqwest::blocking::RequestBuilder,
     context: &str,
 ) -> Result<RawResponse> {
-    let request = builder.build().with_context(|| context.to_string())?;
+    let request = builder
+        .build()
+        .map_err(reqwest::Error::without_url)
+        .with_context(|| context.to_string())?;
+    let sensitive = request.url().path() == "/client/auth/v2/login/magic";
 
-    if is_verbose() {
+    if is_verbose() && !sensitive {
         eprintln!("[verbose] > {} {}", request.method(), request.url());
         if let Some(body) = request.body()
             && let Some(bytes) = body.as_bytes()
@@ -80,11 +84,18 @@ fn send_request(
 
     let response = client
         .execute(request)
+        .map_err(|error| {
+            if sensitive {
+                error.without_url()
+            } else {
+                error
+            }
+        })
         .with_context(|| context.to_string())?;
     let status = response.status();
     let body = response.text().unwrap_or_default();
 
-    if is_verbose() {
+    if is_verbose() && !sensitive {
         eprintln!(
             "[verbose] < {} {}",
             status.as_u16(),
@@ -97,7 +108,12 @@ fn send_request(
 }
 
 fn client() -> Result<Client> {
+    client_with_redirect_policy(reqwest::redirect::Policy::default())
+}
+
+fn client_with_redirect_policy(policy: reqwest::redirect::Policy) -> Result<Client> {
     Client::builder()
+        .redirect(policy)
         .timeout(Duration::from_secs(120))
         .user_agent(concat!("formanator/", env!("CARGO_PKG_VERSION")))
         .build()
@@ -309,6 +325,21 @@ fn handle_error_response(status: reqwest::StatusCode, body: &str) -> anyhow::Err
         status_text,
         body
     )
+}
+
+fn handle_auth_error_response(status: reqwest::StatusCode, body: &str) -> anyhow::Error {
+    if let Ok(parsed) = serde_json::from_str::<Value>(body)
+        && let Some(message) = parsed
+            .get("errors")
+            .and_then(|errors| errors.get("message"))
+            .and_then(Value::as_str)
+        && message.contains("JWT token is invalid")
+    {
+        return anyhow!(
+            "Your Forma access token is invalid. Please log in again with `formanator login`."
+        );
+    }
+    anyhow!("Forma authentication failed (HTTP {}).", status.as_u16())
 }
 
 // ---------------------------------------------------------------------------
@@ -569,7 +600,7 @@ pub fn request_magic_link(email: &str) -> Result<()> {
 
 /// Exchange a magic-link `id`/`tk` pair for a long-lived access token.
 pub fn exchange_id_and_tk_for_access_token(id: &str, tk: &str) -> Result<String> {
-    let c = client()?;
+    let c = client_with_redirect_policy(reqwest::redirect::Policy::none())?;
     let base = api_base();
     let resp = send_request(
         &c,
@@ -581,10 +612,10 @@ pub fn exchange_id_and_tk_for_access_token(id: &str, tk: &str) -> Result<String>
         "Failed to exchange magic link for an access token",
     )?;
     if !resp.status.is_success() {
-        return Err(handle_error_response(resp.status, &resp.body));
+        return Err(handle_auth_error_response(resp.status, &resp.body));
     }
     let parsed: MagicLinkExchangeResponse = serde_json::from_str(&resp.body)
-        .context("Failed to parse Forma magic link exchange response")?;
+        .map_err(|_| anyhow!("Failed to parse Forma magic link exchange response"))?;
     if !parsed.success {
         bail!("Something went wrong while exchanging the magic link for an access token.");
     }

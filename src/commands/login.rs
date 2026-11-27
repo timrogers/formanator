@@ -9,10 +9,65 @@ use crate::prompt::prompt;
 use crate::verbose;
 
 const FORMA_LOGIN_URL: &str = "https://client.joinforma.com/login?type=magic";
+const MAX_LINK_HOPS: usize = 5;
 
 /// Parse a magic link emailed to the user, returning the embedded `id`/`tk`.
 pub fn parse_emailed_forma_magic_link(input: &str) -> Result<(String, String)> {
-    let parsed = Url::parse(input.trim()).context("Could not parse the input as a URL.")?;
+    resolve_magic_link(input, fetch_tracking_redirect)
+}
+
+fn is_tracking_link(link: &Url) -> bool {
+    link.path() == "/ls/click"
+        && link
+            .host_str()
+            .and_then(|host| host.strip_prefix("url"))
+            .and_then(|host| host.strip_suffix(".joinforma.com"))
+            .is_some_and(|number| {
+                !number.is_empty() && number.bytes().all(|byte| byte.is_ascii_digit())
+            })
+}
+
+fn validate_redirect_url(link: &Url) -> Result<()> {
+    if link.scheme() != "https"
+        || !link.username().is_empty()
+        || link.password().is_some()
+        || link.port().is_some()
+        || link.fragment().is_some()
+    {
+        bail!(
+            "Forma redirects require HTTPS without user information, custom ports, or fragments."
+        );
+    }
+    Ok(())
+}
+
+fn resolve_magic_link(
+    input: &str,
+    mut redirect: impl FnMut(&Url) -> Result<String>,
+) -> Result<(String, String)> {
+    let mut parsed = Url::parse(input.trim()).context("Could not parse the input as a URL.")?;
+    let mut hops = 0;
+    while is_tracking_link(&parsed) {
+        validate_redirect_url(&parsed)?;
+        let mut upn = parsed.query_pairs().filter(|(key, _)| key == "upn");
+        if !matches!((upn.next(), upn.next()), (Some((_, value)), None) if !value.is_empty()) {
+            bail!("Forma tracking links require exactly one nonempty `upn` query parameter.");
+        }
+        if hops == MAX_LINK_HOPS {
+            bail!("Forma magic link exceeded the redirect limit.");
+        }
+        parsed = parsed
+            .join(&redirect(&parsed)?)
+            .context("Invalid Forma redirect URL.")?;
+        hops += 1;
+    }
+
+    if hops > 0 {
+        validate_redirect_url(&parsed)?;
+        if parsed.host_str() == Some("joinforma.page.link") && parsed.path() != "/" {
+            bail!("Unsupported Forma redirect path.");
+        }
+    }
 
     if parsed.scheme() != "https" {
         bail!("Forma magic links are expected to have the protocol `https:`.");
@@ -31,6 +86,9 @@ pub fn parse_emailed_forma_magic_link(input: &str) -> Result<(String, String)> {
         parsed
     };
 
+    if hops > 0 {
+        validate_redirect_url(&real_link)?;
+    }
     let is_supported_target = matches!(
         (real_link.host_str(), real_link.path()),
         (Some("client.joinforma.com"), "/auth/magic")
@@ -58,6 +116,31 @@ pub fn parse_emailed_forma_magic_link(input: &str) -> Result<(String, String)> {
             "Forma magic links are expected to have a `link` query parameter containing a URL with `id` and `tk` query parameters embedded inside."
         ),
     }
+}
+
+fn fetch_tracking_redirect(link: &Url) -> Result<String> {
+    let client = reqwest::blocking::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .context("Failed to build Forma tracking client.")?;
+    // Do not retain reqwest errors: they can include the credential-bearing URL.
+    let response = client
+        .get(link.clone())
+        .send()
+        .map_err(|_| anyhow::anyhow!("Failed to resolve Forma tracking link."))?;
+    if !matches!(response.status().as_u16(), 301 | 302 | 303 | 307 | 308) {
+        bail!(
+            "Forma tracking link did not return a redirect (HTTP {}).",
+            response.status().as_u16()
+        );
+    }
+    response
+        .headers()
+        .get(reqwest::header::LOCATION)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned)
+        .context("Forma tracking redirect has a missing or invalid Location header.")
 }
 
 fn prompt_for_emailed_magic_link() -> Result<(String, String)> {
@@ -217,5 +300,135 @@ mod tests {
         let (id, tk) = parse_emailed_forma_magic_link(&outer).expect("should parse");
         assert_eq!(id, "abc");
         assert_eq!(tk, "xyz");
+    }
+
+    #[test]
+    fn tracking_request_does_not_follow_redirects() {
+        let server = httpmock::MockServer::start();
+        let destination = server.url("/must-not-be-visited");
+        let mock = server.mock(|when, then| {
+            when.method(httpmock::Method::GET)
+                .path("/ls/click")
+                .query_param("upn", "synthetic-tracking-token");
+            then.status(302).header("Location", &destination);
+        });
+        let target = server.mock(|when, then| {
+            when.path("/must-not-be-visited");
+            then.status(200);
+        });
+        let local = Url::parse(&server.url("/ls/click?upn=synthetic-tracking-token")).unwrap();
+        assert_eq!(fetch_tracking_redirect(&local).unwrap(), destination);
+        mock.assert_calls(1);
+        target.assert_calls(0);
+    }
+
+    #[test]
+    fn resolves_tracking_redirect_to_direct_link() {
+        let result = resolve_magic_link(
+            "https://url123.joinforma.com/ls/click?upn=synthetic-tracking-token",
+            |url| {
+                assert_eq!(url.host_str(), Some("url123.joinforma.com"));
+                Ok(
+                    "https://client.joinforma.com/auth/magic?id=synthetic-id&tk=synthetic-token"
+                        .into(),
+                )
+            },
+        )
+        .unwrap();
+        assert_eq!(result, ("synthetic-id".into(), "synthetic-token".into()));
+    }
+
+    #[test]
+    fn resolves_tracking_through_legacy_wrapper_and_tracking_hops() {
+        let direct = "https://api.joinforma.com/client/auth/v2/login/magic?id=synthetic-id&tk=synthetic-token";
+        let wrapper =
+            Url::parse_with_params("https://joinforma.page.link/", &[("link", direct)]).unwrap();
+        let mut calls = 0;
+        let result = resolve_magic_link(
+            "https://url1.joinforma.com/ls/click?upn=synthetic-tracking-token",
+            |_| {
+                calls += 1;
+                Ok(if calls == 1 {
+                    "https://url2.joinforma.com/ls/click?upn=synthetic-tracking-token".into()
+                } else {
+                    wrapper.to_string()
+                })
+            },
+        )
+        .unwrap();
+        assert_eq!(calls, 2);
+        assert_eq!(result, ("synthetic-id".into(), "synthetic-token".into()));
+    }
+
+    #[test]
+    fn rejects_unsafe_or_malformed_links_before_network_access() {
+        for input in [
+            "https://url.joinforma.com/ls/click?upn=synthetic",
+            "https://urlx.joinforma.com/ls/click?upn=synthetic",
+            "https://url1.joinforma.com.evil.example/ls/click?upn=synthetic",
+            "https://url1.joinforma.com/other?upn=synthetic",
+            "http://url1.joinforma.com/ls/click?upn=synthetic",
+            "https://synthetic@url1.joinforma.com/ls/click?upn=synthetic",
+            "https://url1.joinforma.com:8443/ls/click?upn=synthetic",
+            "https://url1.joinforma.com/ls/click?upn=synthetic#fragment",
+            "https://url1.joinforma.com/ls/click",
+            "https://url1.joinforma.com/ls/click?upn=",
+            "https://url1.joinforma.com/ls/click?upn=synthetic&upn=duplicate",
+        ] {
+            assert!(resolve_magic_link(input, |_| panic!("unexpected network request")).is_err());
+        }
+    }
+
+    #[test]
+    fn rejects_unsafe_redirect_targets_without_requesting_them() {
+        for destination in [
+            "https://evil.example/?tk=synthetic-secret",
+            "http://client.joinforma.com/auth/magic?id=synthetic&tk=synthetic-secret",
+            "https://api.joinforma.com/other?tk=synthetic-secret",
+            "https://127.0.0.1/ls/click?upn=synthetic-secret",
+            "https://client.joinforma.com:8443/auth/magic?id=synthetic&tk=synthetic-secret",
+            "https://synthetic-secret@client.joinforma.com/auth/magic?id=synthetic&tk=synthetic",
+            "https://[invalid?tk=synthetic-secret",
+        ] {
+            let mut calls = 0;
+            let error = resolve_magic_link(
+                "https://url1.joinforma.com/ls/click?upn=synthetic-secret",
+                |_| {
+                    calls += 1;
+                    Ok(destination.into())
+                },
+            )
+            .unwrap_err();
+            assert_eq!(calls, 1);
+            assert!(!format!("{error:#}").contains("synthetic-secret"));
+        }
+    }
+
+    #[test]
+    fn bounds_tracking_redirect_loops() {
+        let input = "https://url1.joinforma.com/ls/click?upn=synthetic";
+        let mut calls = 0;
+        let error = resolve_magic_link(input, |_| {
+            calls += 1;
+            Ok("/ls/click?upn=synthetic".into())
+        })
+        .unwrap_err();
+        assert_eq!(calls, MAX_LINK_HOPS);
+        assert!(error.to_string().contains("redirect limit"));
+    }
+
+    #[test]
+    fn rejects_non_redirect_responses_and_missing_locations() {
+        for status in [200, 302, 400, 500] {
+            let server = httpmock::MockServer::start();
+            let mock = server.mock(|when, then| {
+                when.method(httpmock::Method::GET).path("/ls/click");
+                then.status(status).body("synthetic-secret");
+            });
+            let url = Url::parse(&server.url("/ls/click?upn=synthetic-secret")).unwrap();
+            let error = fetch_tracking_redirect(&url).unwrap_err();
+            assert!(!format!("{error:#}").contains("synthetic-secret"));
+            mock.assert_calls(1);
+        }
     }
 }

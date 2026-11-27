@@ -179,7 +179,10 @@ impl FormanatorMcpServer {
         &self,
         Parameters(params): Parameters<LoginCompleteParams>,
     ) -> Result<CallToolResult, McpError> {
-        self.complete_login(&params.magic_link)?;
+        let server = self.clone();
+        tokio::task::spawn_blocking(move || server.complete_login(&params.magic_link))
+            .await
+            .map_err(|_| McpError::internal_error("Login task failed", None))??;
         Ok(CallToolResult::success(vec![ContentBlock::text(
             "You are now logged in to Forma. The access token has been stored locally.",
         )]))
@@ -454,8 +457,11 @@ mod tests {
         });
 
         let mcp_server = FormanatorMcpServer::new(None);
-        mcp_server
-            .complete_login(&magic_link("the-id", "the-tk"))
+        let runtime = tokio::runtime::Runtime::new().expect("runtime");
+        runtime
+            .block_on(mcp_server.login_complete(Parameters(LoginCompleteParams {
+                magic_link: magic_link("the-id", "the-tk"),
+            })))
             .expect("login should complete");
 
         mock.assert();
