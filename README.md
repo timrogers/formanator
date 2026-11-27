@@ -58,10 +58,12 @@ To get started, you'll need to connect Formanator to your Forma account:
 1. Run `formanator login`.
 2. Press Enter to open your browser to the Forma login page.
 3. Enter your email address and request a magic link.
-4. Copy the magic link from your email and paste it into the terminal. Formanator accepts either the full `joinforma.page.link` URL or its decoded `client.joinforma.com/auth/magic` target.
+4. Copy the magic link from your email and paste it into the terminal. Formanator accepts email tracking links (`https://url<number>.joinforma.com/ls/click?upn=...`), legacy `joinforma.page.link` wrappers, and direct `client.joinforma.com/auth/magic` or `api.joinforma.com/client/auth/v2/login/magic` URLs.
 5. You're logged in 🥳
 
 The access token is securely stored in the system Keychain on macOS. On other platforms, it's stored in `~/.formanator.toml`.
+
+The same link formats work with `formanator login --magic-link` and MCP `login_complete`. Tracking links require a network request to resolve; Formanator validates each redirect and stops before visiting the final magic-link URL, then uses its normal token exchange. Direct links are parsed locally. Treat all these links as credentials and do not share them or include them in logs.
 
 ### Automatic update checks
 

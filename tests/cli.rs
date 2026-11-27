@@ -556,6 +556,57 @@ fn login_with_invalid_magic_link_fails_without_writing_config() {
 
 #[test]
 #[serial]
+fn verbose_login_does_not_print_credentials_or_exchange_response() {
+    let (server, mut cmd, _home) = cli_with_server();
+    let mock = server.mock(|when, then| {
+        when.method(GET).path("/client/auth/v2/login/magic");
+        then.status(200)
+            .body(fixture("magic_link_exchange_response.json"));
+    });
+    cmd.args([
+        "login",
+        "--verbose",
+        "--magic-link",
+        "https://client.joinforma.com/auth/magic?id=synthetic-private-id&tk=synthetic-private-token",
+    ])
+    .assert()
+    .success()
+    .stdout(contains("synthetic-private").not())
+    .stderr(contains("synthetic-private").not())
+    .stdout(contains(common::FIXTURE_AUTH_TOKEN).not())
+    .stderr(contains(common::FIXTURE_AUTH_TOKEN).not());
+    mock.assert();
+}
+
+#[test]
+#[serial]
+fn login_errors_do_not_echo_sensitive_authentication_responses() {
+    for (status, body) in [
+        (401, r#"{"errors":{"message":"synthetic-private-token"}}"#),
+        (200, r#"{"success":"synthetic-private-token"}"#),
+    ] {
+        let (server, mut cmd, home) = cli_with_server();
+        let mock = server.mock(|when, then| {
+            when.method(GET).path("/client/auth/v2/login/magic");
+            then.status(status).body(body);
+        });
+        cmd.args([
+            "login",
+            "--verbose",
+            "--magic-link",
+            "https://client.joinforma.com/auth/magic?id=synthetic-private-id&tk=synthetic-private-token",
+        ])
+        .assert()
+        .failure()
+        .stdout(contains("synthetic-private").not())
+        .stderr(contains("synthetic-private").not());
+        mock.assert();
+        assert!(!home.path().join(".formanator.toml").exists());
+    }
+}
+
+#[test]
+#[serial]
 fn submit_claims_from_directory_analyses_everything_before_prompting() {
     let (server, mut cmd, _home) = cli_with_server();
     server.mock(|when, then| {
