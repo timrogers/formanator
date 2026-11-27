@@ -556,52 +556,51 @@ fn login_with_invalid_magic_link_fails_without_writing_config() {
 
 #[test]
 #[serial]
-fn verbose_login_does_not_print_credentials_or_exchange_response() {
-    let (server, mut cmd, _home) = cli_with_server();
-    let mock = server.mock(|when, then| {
-        when.method(GET).path("/client/auth/v2/login/magic");
-        then.status(200)
-            .body(fixture("magic_link_exchange_response.json"));
-    });
-    cmd.args([
-        "login",
-        "--verbose",
-        "--magic-link",
-        "https://client.joinforma.com/auth/magic?id=synthetic-private-id&tk=synthetic-private-token",
-    ])
-    .assert()
-    .success()
-    .stdout(contains("synthetic-private").not())
-    .stderr(contains("synthetic-private").not())
-    .stdout(contains(common::FIXTURE_AUTH_TOKEN).not())
-    .stderr(contains(common::FIXTURE_AUTH_TOKEN).not());
-    mock.assert();
-}
-
-#[test]
-#[serial]
-fn login_errors_do_not_echo_sensitive_authentication_responses() {
-    for (status, body) in [
-        (401, r#"{"errors":{"message":"synthetic-private-token"}}"#),
-        (200, r#"{"success":"synthetic-private-token"}"#),
+fn login_does_not_echo_credentials_or_authentication_responses() {
+    for (status, body, success) in [
+        (200, fixture("magic_link_exchange_response.json"), true),
+        (
+            401,
+            r#"{"errors":{"message":"synthetic-private-token"}}"#.into(),
+            false,
+        ),
+        (
+            200,
+            r#"{"success":"synthetic-private-token"}"#.into(),
+            false,
+        ),
+        (302, "synthetic-private-token".into(), false),
     ] {
         let (server, mut cmd, home) = cli_with_server();
+        let target = server.mock(|when, then| {
+            when.method(GET).path("/must-not-be-visited");
+            then.status(200);
+        });
         let mock = server.mock(|when, then| {
             when.method(GET).path("/client/auth/v2/login/magic");
-            then.status(status).body(body);
+            then.status(status)
+                .header("Location", server.url("/must-not-be-visited"))
+                .body(body.as_str());
         });
-        cmd.args([
+        let result = cmd.args([
             "login",
             "--verbose",
             "--magic-link",
             "https://client.joinforma.com/auth/magic?id=synthetic-private-id&tk=synthetic-private-token",
         ])
         .assert()
-        .failure()
         .stdout(contains("synthetic-private").not())
-        .stderr(contains("synthetic-private").not());
+        .stderr(contains("synthetic-private").not())
+        .stdout(contains(common::FIXTURE_AUTH_TOKEN).not())
+        .stderr(contains(common::FIXTURE_AUTH_TOKEN).not());
+        if success {
+            result.success();
+        } else {
+            result.failure();
+            assert!(!home.path().join(".formanator.toml").exists());
+        }
         mock.assert();
-        assert!(!home.path().join(".formanator.toml").exists());
+        target.assert_calls(0);
     }
 }
 

@@ -353,28 +353,6 @@ fn exchange_id_and_tk_propagates_invalid_jwt_error() {
     );
 }
 
-#[test]
-#[serial]
-fn exchange_does_not_follow_redirects_or_echo_response_secrets() {
-    let (server, _guard) = forma_server();
-    let target = server.mock(|when, then| {
-        when.method(GET).path("/must-not-be-visited");
-        then.status(200)
-            .body(fixture("magic_link_exchange_response.json"));
-    });
-    let redirect = server.mock(|when, then| {
-        when.method(GET).path("/client/auth/v2/login/magic");
-        then.status(302)
-            .header("Location", server.url("/must-not-be-visited"))
-            .body("synthetic-secret");
-    });
-    let error = exchange_id_and_tk_for_access_token("synthetic-id", "synthetic-secret")
-        .expect_err("redirects must not be followed");
-    assert!(!format!("{error:#}").contains("synthetic-secret"));
-    redirect.assert_calls(1);
-    target.assert_calls(0);
-}
-
 // ---------------------------------------------------------------------------
 // create_claim
 // ---------------------------------------------------------------------------

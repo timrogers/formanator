@@ -84,7 +84,13 @@ fn send_request(
 
     let response = client
         .execute(request)
-        .map_err(reqwest::Error::without_url)
+        .map_err(|error| {
+            if sensitive {
+                error.without_url()
+            } else {
+                error
+            }
+        })
         .with_context(|| context.to_string())?;
     let status = response.status();
     let body = response.text().unwrap_or_default();
@@ -573,7 +579,7 @@ pub fn create_claim(opts: &CreateClaimOptions) -> Result<()> {
 
 /// Request a magic link be emailed to the user.
 pub fn request_magic_link(email: &str) -> Result<()> {
-    let c = client_with_redirect_policy(reqwest::redirect::Policy::none())?;
+    let c = client()?;
     let base = api_base();
     let resp = send_request(
         &c,
@@ -582,10 +588,10 @@ pub fn request_magic_link(email: &str) -> Result<()> {
         "Failed to request magic link",
     )?;
     if !resp.status.is_success() {
-        return Err(handle_auth_error_response(resp.status, &resp.body));
+        return Err(handle_error_response(resp.status, &resp.body));
     }
-    let parsed: GenericSuccessResponse = serde_json::from_str(&resp.body)
-        .map_err(|_| anyhow!("Failed to parse Forma magic link response"))?;
+    let parsed: GenericSuccessResponse =
+        serde_json::from_str(&resp.body).context("Failed to parse Forma magic link response")?;
     if !parsed.success {
         bail!("Something went wrong while requesting a magic link from Forma.");
     }
